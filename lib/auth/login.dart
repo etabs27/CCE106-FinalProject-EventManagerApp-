@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:event_manager_application_finalproject/auth/signup.dart'; // Import your sign up page
+import 'package:event_manager_application_finalproject/auth/signup.dart'; 
 import 'package:event_manager_application_finalproject/auth_service.dart';
 import 'package:event_manager_application_finalproject/views/user/user_homepage.dart';
 import 'package:event_manager_application_finalproject/views/manager/manager_homepage.dart';
@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true; // State variable for password visibility
 
   @override
   void dispose() {
@@ -169,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword, // Use the state variable
                   decoration: InputDecoration(
                     hintText: 'Enter your password',
                     border: OutlineInputBorder(
@@ -183,6 +184,17 @@ class _LoginPageState extends State<LoginPage> {
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 16,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword; // Toggle password visibility
+                        });
+                      },
                     ),
                   ),
                   validator: (value) {
@@ -260,7 +272,7 @@ class _LoginPageState extends State<LoginPage> {
                   height: 56,
                   child: OutlinedButton(
                     onPressed: _signInWithGoogle,
-                      style: OutlinedButton.styleFrom(
+                    style: OutlinedButton.styleFrom(
                       foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                       side: BorderSide(
                         color: Theme.of(context).dividerColor,
@@ -270,9 +282,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-
-                      
-                   child: Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(

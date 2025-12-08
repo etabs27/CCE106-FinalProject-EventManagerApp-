@@ -37,37 +37,37 @@ class _TicketsPageState extends State<TicketsPage> with SingleTickerProviderStat
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'My Tickets',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.onBackground,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-          ),
-        ),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onBackground.withOpacity(0.65),
-          indicatorColor: colorScheme.primary,
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-          tabs: [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
-            Tab(text: 'Cancelled'),
-          ],
-        ),
-      ),
+  backgroundColor: colorScheme.surface,
+  automaticallyImplyLeading: false,
+  title: Text(
+    'My Tickets',
+    style: textTheme.titleLarge?.copyWith(
+      color: colorScheme.onBackground,
+      fontWeight: FontWeight.w700,
+      fontSize: 24,
+    ),
+  ),
+  elevation: 0,
+  bottom: TabBar(
+    controller: _tabController,
+    labelColor: colorScheme.primary,
+    unselectedLabelColor: colorScheme.onBackground.withOpacity(0.65),
+    indicatorColor: colorScheme.primary,
+    labelStyle: TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    unselectedLabelStyle: TextStyle(
+      fontWeight: FontWeight.w500,
+      fontSize: 14,
+    ),
+    tabs: [
+      Tab(text: 'Upcoming'),
+      Tab(text: 'Past'),
+      Tab(text: 'Cancelled'),
+    ],
+  ),
+),
       body: TabBarView(
         controller: _tabController,
         children: [

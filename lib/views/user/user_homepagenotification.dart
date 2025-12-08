@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:event_manager_application_finalproject/views/user/user_profilepage.dart';
 
 class UserHomePageNotification extends StatefulWidget {
   const UserHomePageNotification({super.key});
@@ -85,6 +86,25 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
   ];
 
   int _unreadCount = 2;
+  String _currentFilter = 'All'; // 'All' or 'Unread'
+
+  @override
+  void initState() {
+    super.initState();
+    // Calculate initial unread count
+    _calculateUnreadCount();
+  }
+
+  void _calculateUnreadCount() {
+    _unreadCount = _notifications.where((notification) => !(notification['isRead'] as bool)).length;
+  }
+
+  List<Map<String, dynamic>> get _filteredNotifications {
+    if (_currentFilter == 'Unread') {
+      return _notifications.where((notification) => !(notification['isRead'] as bool)).toList();
+    }
+    return _notifications; // All notifications
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +115,7 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: colorScheme.surface,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_rounded,
@@ -108,7 +128,7 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
         ),
         title: Text(
           'Notifications',
-          style: textTheme.displayLarge?.copyWith(
+          style: textTheme.titleLarge?.copyWith(
             color: colorScheme.onBackground,
             fontWeight: FontWeight.w700,
             fontSize: 24,
@@ -173,37 +193,57 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
       ),
       body: Column(
         children: [
-          // Filter Chips
+          // Filter dropdown row placed below AppBar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip('All', true),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Unread', false),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Events', false),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Tickets', false),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Offers', false),
-                ],
-              ),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.filter_list_rounded,
+                        color: colorScheme.primary,
+                        size: 16,
+                      ),
+                      SizedBox(width: 4),
+                      Container(
+                        width: 80, // Width to accommodate text
+                        child: _buildFilterDropdown(),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        color: colorScheme.primary,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
           // Notifications List
           Expanded(
-            child: _notifications.isEmpty
+            child: _filteredNotifications.isEmpty
                 ? _buildEmptyState()
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _notifications.length,
+                    itemCount: _filteredNotifications.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final notification = _notifications[index];
+                      final notification = _filteredNotifications[index];
                       return _buildNotificationItem(notification);
                     },
                   ),
@@ -213,33 +253,58 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
+  Widget _buildFilterDropdown() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
-    return FilterChip(
-      label: Text(
-        label,
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        icon: Container(width: 0, height: 0),
+        iconSize: 0,
+        elevation: 0,
+        isDense: true,
+        isExpanded: true,
         style: TextStyle(
-          color: isSelected ? colorScheme.onPrimary : colorScheme.onBackground.withOpacity(0.7),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+          color: colorScheme.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
         ),
+        dropdownColor: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        items: [
+          DropdownMenuItem<String>(
+            value: 'All',
+            child: Text(
+              'All (${_notifications.length})',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Unread',
+            child: Text(
+              'Unread ($_unreadCount)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentFilter = newValue;
+            });
+          }
+        },
+        underline: Container(),
       ),
-      selected: isSelected,
-      backgroundColor: colorScheme.surface,
-      selectedColor: colorScheme.primary,
-      checkmarkColor: colorScheme.onPrimary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? colorScheme.primary : colorScheme.primary.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      onSelected: (selected) {
-        // Handle filter selection
-      },
     );
   }
 
@@ -247,14 +312,18 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final isRead = notification['isRead'] as bool;
+    final isRead = (notification['isRead'] as bool?) ?? false;
 
     return GestureDetector(
       onTap: () {
         if (!isRead) {
           setState(() {
-            notification['isRead'] = true;
-            _unreadCount--;
+            // Find and update the notification in the main list
+            final index = _notifications.indexWhere((n) => n['id'] == notification['id']);
+            if (index != -1) {
+              _notifications[index]['isRead'] = true;
+              _calculateUnreadCount(); // Recalculate unread count
+            }
           });
         }
       },
@@ -381,7 +450,7 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No Notifications',
+              _currentFilter == 'Unread' ? 'No Unread Notifications' : 'No Notifications',
               style: textTheme.titleLarge?.copyWith(
                 color: colorScheme.onBackground,
                 fontWeight: FontWeight.w700,
@@ -390,7 +459,9 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
             ),
             const SizedBox(height: 12),
             Text(
-              'You\'re all caught up! Check back later\nfor new updates and events.',
+              _currentFilter == 'Unread'
+                  ? 'You\'ve read all your notifications!'
+                  : 'You\'re all caught up! Check back later\nfor new updates and events.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onBackground.withOpacity(0.6),
                 fontSize: 15,
@@ -432,23 +503,7 @@ class _UserHomePageNotificationState extends State<UserHomePageNotification> {
           notification['isRead'] = true;
         }
       }
-      _unreadCount = 0;
+      _calculateUnreadCount(); // Recalculate unread count
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'All notifications marked as read',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
   }
 }

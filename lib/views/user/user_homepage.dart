@@ -4,7 +4,7 @@ import 'package:event_manager_application_finalproject/views/user/user_explorepa
 import 'package:event_manager_application_finalproject/views/user/user_favoritepage.dart';
 import 'package:event_manager_application_finalproject/views/user/user_ticketpage.dart';
 import 'package:event_manager_application_finalproject/views/user/user_profilepage.dart';
-import 'package:event_manager_application_finalproject/views/user/user_homepagenotification.dart'; // Add this import
+import 'package:event_manager_application_finalproject/views/user/user_homepagenotification.dart';
 
 class UserHomePageWidget extends StatefulWidget {
   const UserHomePageWidget({super.key});
@@ -18,7 +18,24 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
   final TextEditingController _searchController = TextEditingController();
   int _currentIndex = 0;
   int _currentBannerIndex = 0;
-  int _notificationCount = 2; // Add notification count
+  int _notificationCount = 2;
+  
+  // For filter
+  bool _showFilter = false;
+  
+  // Event categories with icons and selection state
+  final List<Map<String, dynamic>> _eventCategories = [
+    {'name': 'Music', 'icon': Icons.music_note_rounded, 'selected': false},
+    {'name': 'Comedy', 'icon': Icons.theater_comedy_rounded, 'selected': false},
+    {'name': 'Sports', 'icon': Icons.sports_basketball_rounded, 'selected': false},
+    {'name': 'Art', 'icon': Icons.palette_rounded, 'selected': false},
+    {'name': 'Theater', 'icon': Icons.theaters_rounded, 'selected': false},
+    {'name': 'Food & Drink', 'icon': Icons.restaurant_rounded, 'selected': false},
+    {'name': 'Technology', 'icon': Icons.computer_rounded, 'selected': false},
+    {'name': 'Business', 'icon': Icons.business_center_rounded, 'selected': false},
+    {'name': 'Education', 'icon': Icons.school_rounded, 'selected': false},
+    {'name': 'Health & Wellness', 'icon': Icons.health_and_safety_rounded, 'selected': false},
+  ];
 
   @override
   void initState() {
@@ -37,6 +54,47 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
     super.dispose();
   }
 
+  void _toggleCategory(int index) {
+    setState(() {
+      _eventCategories[index]['selected'] = !_eventCategories[index]['selected'];
+    });
+  }
+
+  void _selectAllCategories() {
+    setState(() {
+      for (var category in _eventCategories) {
+        category['selected'] = true;
+      }
+    });
+  }
+
+  void _clearAllCategories() {
+    setState(() {
+      for (var category in _eventCategories) {
+        category['selected'] = false;
+      }
+    });
+  }
+
+  List<String> get _selectedCategories {
+    return _eventCategories
+      .where((category) => (category['selected'] as bool?) ?? false)
+        .map((category) => category['name'] as String)
+        .toList();
+  }
+
+  void _clearAllFilters() {
+    _clearAllCategories();
+  }
+
+  void _applyFilters() {
+    // Apply filters logic here
+    setState(() {
+      _showFilter = false;
+    });
+    // You can add logic to filter events based on selected categories
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -46,123 +104,448 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Discover Events',
-          style: textTheme.displayLarge?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
+  backgroundColor: colorScheme.surface,
+  automaticallyImplyLeading: false,
+  title: Text(
+    'Discover Events',
+    style: textTheme.titleLarge?.copyWith(
+      color: colorScheme.onBackground,
+      fontWeight: FontWeight.w700,
+      fontSize: 24,
+    ),
+  ),
+  actions: [
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const UserHomePageNotification(),
+            ),
+          );
+        },
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.dividerColor),
           ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
-              onTap: () {
-                // Navigate to notification page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const UserHomePageNotification(),
-                  ),
-                );
-              },
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.dividerColor),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      Icons.notifications_none,
-                      color: colorScheme.onSurface,
-                      size: 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none,
+                color: colorScheme.onBackground,
+                size: 24,
+              ),
+              if (_notificationCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorScheme.primary,
+                      border: Border.all(
+                        color: colorScheme.surface,
+                        width: 2,
+                      ),
                     ),
-                    if (_notificationCount > 0)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: colorScheme.primary,
-                            border: Border.all(
-                              color: colorScheme.surface,
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              _notificationCount > 9 ? '9+' : '$_notificationCount',
-                              style: TextStyle(
-                                color: colorScheme.surface,
-                                fontSize: 6,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                    child: Center(
+                      child: Text(
+                        _notificationCount > 9 ? '9+' : '$_notificationCount',
+                        style: TextStyle(
+                          color: colorScheme.surface,
+                          fontSize: 6,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
-        ],
-        centerTitle: false,
-        elevation: 0,
+        ),
       ),
+    ),
+  ],
+  centerTitle: false,
+  elevation: 0,
+),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Search Bar
+            // Search Bar with Filter Button
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Container(
-                width: double.infinity,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search shows, events, venues...',
-                    hintStyle: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.65),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: theme.dividerColor),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: colorScheme.primary),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surface,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: colorScheme.onSurface.withOpacity(0.7),
-                      size: 22,
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search shows, events, venues...',
+                        hintStyle: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface.withOpacity(0.65),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: theme.dividerColor),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: colorScheme.primary),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colorScheme.onSurface.withOpacity(0.7),
+                          size: 22,
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Divider before filter button
+                            Container(
+                              width: 1,
+                              height: 24,
+                              color: theme.dividerColor,
+                            ),
+                            const SizedBox(width: 8),
+                            // Filter Button
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _showFilter = !_showFilter;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.filter_list_rounded,
+                                      color: _selectedCategories.isNotEmpty
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurface.withOpacity(0.7),
+                                      size: 22,
+                                    ),
+                                    if (_selectedCategories.isNotEmpty)
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primary,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '${_selectedCategories.length}',
+                                          style: TextStyle(
+                                            color: colorScheme.surface,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ),
+                      ),
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                  ),
-                ),
+                  
+                  // Filter Section (Expandable)
+                  if (_showFilter) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header - Only "Filters" title
+                            Text(
+                              'Filters',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Event Categories section
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Event Categories',
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (_selectedCategories.isNotEmpty)
+                                  GestureDetector(
+                                    onTap: _clearAllCategories,
+                                    child: Text(
+                                      'Clear all',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.primary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Categories grid
+                            SizedBox(
+                              height: 180, // Increased height for 2 rows of categories
+                              child: GridView.builder(
+                                padding: EdgeInsets.zero,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3, // 3 items per row
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
+                                  childAspectRatio: 2.5,
+                                ),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _eventCategories.length,
+                                itemBuilder: (context, index) {
+                                  final category = _eventCategories[index];
+                                  final categoryName = category['name'] as String;
+                                  final categoryIcon = category['icon'] as IconData;
+                                  final isSelected = (category['selected'] as bool?) ?? false;
+                                  
+                                  return GestureDetector(
+                                    onTap: () => _toggleCategory(index),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? colorScheme.primary.withOpacity(0.1)
+                                            : colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? colorScheme.primary
+                                              : theme.dividerColor,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            categoryIcon,
+                                            color: isSelected
+                                                ? colorScheme.primary
+                                                : colorScheme.onSurface.withOpacity(0.7),
+                                            size: 16,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            categoryName,
+                                            style: textTheme.bodyMedium?.copyWith(
+                                              color: isSelected
+                                                  ? colorScheme.primary
+                                                  : colorScheme.onSurface,
+                                              fontSize: 11,
+                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            
+                            // Select All button
+                            if (_selectedCategories.length < _eventCategories.length)
+                              GestureDetector(
+                                onTap: _selectAllCategories,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: theme.dividerColor),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Select All',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            
+                            // Selected categories display
+                            if (_selectedCategories.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Selected (${_selectedCategories.length}):',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurface.withOpacity(0.6),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _selectedCategories.map((categoryName) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primary.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              categoryName,
+                                              style: textTheme.bodySmall?.copyWith(
+                                                color: colorScheme.primary,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            GestureDetector(
+                                              onTap: () {
+                                                final index = _eventCategories.indexWhere(
+                                                  (cat) => cat['name'] == categoryName
+                                                );
+                                                if (index != -1) {
+                                                  _toggleCategory(index);
+                                                }
+                                              },
+                                              child: Icon(
+                                                Icons.close_rounded,
+                                                size: 14,
+                                                color: colorScheme.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            
+                            const SizedBox(height: 20),
+
+                            // Action buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: _clearAllFilters,
+                                    child: Container(
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: theme.dividerColor),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Clear All',
+                                          style: textTheme.bodyLarge?.copyWith(
+                                            color: colorScheme.onSurface,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: _applyFilters,
+                                    child: Container(
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Apply Filters',
+                                          style: textTheme.bodyLarge?.copyWith(
+                                            color: colorScheme.surface,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
 
-            // Metrics Section
+            // Metrics Section (Only 2 metrics now)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -184,72 +567,16 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                       ),
                       const SizedBox(height: 20),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _buildMetricColumn('24', 'Shows Attended'),
                           _buildMetricColumn('8', 'This Month'),
-                          _buildMetricColumn('156', 'Total Hours'),
                         ],
                       ),
                       const SizedBox(height: 20),
                     ],
                   ),
                 ),
-              ),
-            ),
-
-            // Categories Section - FIXED
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Categories',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          // Navigate to all categories page
-                        },
-                        child: Text(
-                          'View all',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 120, // Fixed height for categories grid
-                    child: GridView(
-                      padding: EdgeInsets.zero,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: 0.9,
-                      ),
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _buildCategoryItem(Icons.music_note_rounded, 'Music'),
-                        _buildCategoryItem(Icons.theater_comedy_rounded, 'Comedy'),
-                        _buildCategoryItem(Icons.sports_basketball_rounded, 'Sports'),
-                        _buildCategoryItem(Icons.palette_rounded, 'Art'),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
 
@@ -283,7 +610,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 220, // Fixed height for horizontal scroll
+                    height: 220,
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -316,7 +643,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
               ),
             ),
 
-            // New Shows Section - FIXED
+            // New Shows Section
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -346,7 +673,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 240, // Fixed height for new shows
+                    height: 240,
                     child: Row(
                       children: [
                         Expanded(
@@ -597,53 +924,13 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
     );
   }
 
-  Widget _buildCategoryItem(IconData icon, String label) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-    
-    return SizedBox(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: colorScheme.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildNearYouCard(String title, String date, String distance, String imageUrl) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     
     return Container(
-      width: 260, // Reduced width
+      width: 260,
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -660,7 +947,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
             child: Image.network(
               imageUrl,
               width: double.infinity,
-              height: 130, // Reduced height
+              height: 130,
               fit: BoxFit.cover,
             ),
           ),
@@ -791,8 +1078,8 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 imageUrl,
-                width: 70, // Reduced width
-                height: 70, // Reduced height
+                width: 70,
+                height: 70,
                 fit: BoxFit.cover,
               ),
             ),
@@ -819,8 +1106,6 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                       color: colorScheme.onSurface.withOpacity(0.65),
                       fontSize: 12,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(

@@ -20,7 +20,7 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -39,38 +39,37 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Explore',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.onBackground,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-          ),
-        ),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onBackground.withOpacity(0.65),
-          indicatorColor: colorScheme.primary,
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-          tabs: [
-            Tab(text: 'For You'),
-            Tab(text: 'Trending'),
-            Tab(text: 'Categories'),
-            Tab(text: 'Events'),
-          ],
-        ),
-      ),
+  backgroundColor: colorScheme.surface,
+  automaticallyImplyLeading: false,
+  title: Text(
+    'Explore',
+    style: textTheme.titleLarge?.copyWith(
+      color: colorScheme.onBackground,
+      fontWeight: FontWeight.w700,
+      fontSize: 24,
+    ),
+  ),
+  elevation: 0,
+  bottom: TabBar(
+    controller: _tabController,
+    labelColor: colorScheme.primary,
+    unselectedLabelColor: colorScheme.onBackground.withOpacity(0.65),
+    indicatorColor: colorScheme.primary,
+    labelStyle: TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    unselectedLabelStyle: TextStyle(
+      fontWeight: FontWeight.w500,
+      fontSize: 14,
+    ),
+    tabs: [
+      Tab(text: 'For You'),
+      Tab(text: 'Trending'),
+      Tab(text: 'Events'),
+    ],
+  ),
+),
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -79,9 +78,6 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
           
           // Trending Tab
           _buildTrendingTab(),
-          
-          // Categories Tab
-          _buildCategoriesTab(),
           
           // Events Tab
           _buildEventsTab(),
@@ -151,7 +147,7 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search for anything...',
+                hintText: 'Search for events, venues, or categories...',
                 hintStyle: textTheme.bodyMedium?.copyWith(color: colorScheme.onBackground.withOpacity(0.65)),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
@@ -173,68 +169,21 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
 
           // Popular Searches Section
           Text(
-            'Popular Searches', 
+            'Popular Event Searches', 
             style: textTheme.titleLarge?.copyWith(
               color: colorScheme.onBackground,
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 16),
-          _buildPopularSearchItem('Food & Recipes', Icons.restaurant_rounded),
-          _buildPopularSearchItem('Travel Tips', Icons.flight_rounded),
-          _buildPopularSearchItem('Fitness', Icons.fitness_center_rounded),
-          SizedBox(height: 32),
-
-          // Categories Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Categories', 
-                style: textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onBackground,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  // Navigate to Categories tab
-                  _tabController.animateTo(2); // Index 2 is the Categories tab
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'View all',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: colorScheme.primary,
-                        size: 12,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _buildCategoryCard('Shopping', 'Find the best deals', Icons.shopping_bag_rounded),
-          SizedBox(height: 12),
-          _buildCategoryCard('Entertainment', 'Movies, music & more', Icons.movie_rounded),
-          SizedBox(height: 12),
-          _buildCategoryCard('Food & Drinks', 'Restaurants & cafes', Icons.restaurant_rounded),
+          _buildPopularSearchItem('Concerts & Live Music', Icons.music_note_rounded),
+          _buildPopularSearchItem('Sports Events', Icons.sports_basketball_rounded),
+          _buildPopularSearchItem('Conferences', Icons.business_center_rounded),
+          _buildPopularSearchItem('Festivals', Icons.festival_rounded),
+          _buildPopularSearchItem('Workshops', Icons.school_rounded),
+          _buildPopularSearchItem('Art Exhibitions', Icons.palette_rounded),
+          _buildPopularSearchItem('Food Festivals', Icons.restaurant_rounded),
+          _buildPopularSearchItem('Networking Events', Icons.people_rounded),
         ],
       ),
     );
@@ -251,61 +200,21 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Trending Now', 
+            'Trending Events', 
             style: textTheme.titleLarge?.copyWith(
               color: colorScheme.onBackground,
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 16),
-          _buildTrendingItem('Summer Music Festivals', '1.2M searches'),
-          _buildTrendingItem('Local Food Markets', '856K searches'),
-          _buildTrendingItem('Tech Conferences', '543K searches'),
-          _buildTrendingItem('Art Exhibitions', '432K searches'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTab() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'All Categories', 
-            style: textTheme.titleLarge?.copyWith(
-              color: colorScheme.onBackground,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 16),
-          GridView(
-            padding: EdgeInsets.zero,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.2,
-            ),
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            children: [
-              _buildCategoryGridItem('Music', Icons.music_note_rounded),
-              _buildCategoryGridItem('Sports', Icons.sports_basketball_rounded),
-              _buildCategoryGridItem('Food', Icons.restaurant_rounded),
-              _buildCategoryGridItem('Art', Icons.palette_rounded),
-              _buildCategoryGridItem('Tech', Icons.computer_rounded),
-              _buildCategoryGridItem('Travel', Icons.flight_rounded),
-              _buildCategoryGridItem('Shopping', Icons.shopping_bag_rounded),
-              _buildCategoryGridItem('Entertainment', Icons.movie_rounded),
-            ],
-          ),
+          _buildTrendingItem('Summer Music Festival 2024', '45K+ tickets sold'),
+          _buildTrendingItem('Tech Startup Conference', '32K+ attending'),
+          _buildTrendingItem('Food & Wine Expo', '28K+ interested'),
+          _buildTrendingItem('Marathon Registration 2024', '15K+ registered'),
+          _buildTrendingItem('Art Gallery Opening', '8K+ RSVPs'),
+          _buildTrendingItem('Comedy Night Special', '12K+ tickets sold'),
+          _buildTrendingItem('Yoga & Wellness Retreat', '6K+ registered'),
+          _buildTrendingItem('Business Networking Mixer', '5K+ attending'),
         ],
       ),
     );
@@ -322,16 +231,55 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Upcoming Events', 
+            'Upcoming Events Near You', 
             style: textTheme.titleLarge?.copyWith(
               color: colorScheme.onBackground,
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 16),
-          _buildEventCard('Jazz Night Live', 'Dec 20 • 8:00 PM', 'Blue Note Club'),
-          _buildEventCard('Food Festival', 'Dec 22 • 12:00 PM', 'Central Park'),
-          _buildEventCard('Tech Conference', 'Dec 25 • 9:00 AM', 'Convention Center'),
+          _buildEventCard(
+            'Jazz Night Live Concert', 
+            'Dec 20 • 8:00 PM', 
+            'Blue Note Club • \$45',
+            Icons.music_note_rounded
+          ),
+          _buildEventCard(
+            'Food & Wine Festival', 
+            'Dec 22 • 12:00 PM', 
+            'Central Park • \$25',
+            Icons.restaurant_rounded
+          ),
+          _buildEventCard(
+            'Tech Innovation Summit', 
+            'Dec 25 • 9:00 AM', 
+            'Convention Center • \$120',
+            Icons.computer_rounded
+          ),
+          _buildEventCard(
+            'Yoga & Wellness Retreat', 
+            'Dec 28 • 7:00 AM', 
+            'Sunrise Park • \$60',
+            Icons.self_improvement_rounded
+          ),
+          _buildEventCard(
+            'Indie Film Screening', 
+            'Jan 5 • 6:30 PM', 
+            'Art House Cinema • \$18',
+            Icons.movie_rounded
+          ),
+          _buildEventCard(
+            'Business Networking Mixer', 
+            'Jan 8 • 6:00 PM', 
+            'Downtown Lounge • \$30',
+            Icons.people_rounded
+          ),
+          _buildEventCard(
+            'Charity Gala Dinner', 
+            'Jan 12 • 7:30 PM', 
+            'Grand Hotel • \$150',
+            Icons.dinner_dining_rounded
+          ),
         ],
       ),
     );
@@ -373,71 +321,6 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
           Icons.arrow_forward_ios_rounded,
           color: colorScheme.outline.withOpacity(0.5),
           size: 16,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryCard(String title, String subtitle, IconData icon) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.primary.withOpacity(0.2),
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: colorScheme.primary,
-                size: 24,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title, 
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontSize: 16, 
-                      fontWeight: FontWeight.w600, 
-                      color: colorScheme.onBackground
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    subtitle, 
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onBackground.withOpacity(0.65), 
-                      fontSize: 14
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded, 
-              color: colorScheme.outline.withOpacity(0.5), 
-              size: 16
-            ),
-          ],
         ),
       ),
     );
@@ -494,49 +377,7 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildCategoryGridItem(String title, IconData icon) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.primary.withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: colorScheme.primary,
-              size: 24,
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onBackground,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEventCard(String title, String date, String venue) {
+  Widget _buildEventCard(String title, String date, String venue, IconData icon) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -563,7 +404,7 @@ class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStat
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            Icons.event_rounded,
+            icon,
             color: colorScheme.primary,
             size: 24,
           ),

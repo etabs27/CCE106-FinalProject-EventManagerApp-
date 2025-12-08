@@ -13,6 +13,9 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
@@ -37,14 +40,17 @@ class _SignUpPageState extends State<SignUpPage> {
   void _navigateToSignIn() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const LoginPage()), // Update with your login page
+      MaterialPageRoute(builder: (context) => const LoginPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -62,7 +68,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
@@ -75,7 +81,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: colorScheme.onBackground,
                   ),
                 ),
                 
@@ -86,7 +92,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   "Let's get started by filling out the form below.",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: colorScheme.onBackground.withOpacity(0.7),
                   ),
                 ),
                 
@@ -98,7 +104,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onBackground.withOpacity(0.8),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -109,11 +115,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     hintText: 'Enter your email',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                      borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.9)),
+                      borderSide: BorderSide(color: colorScheme.primary),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -139,26 +145,39 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onBackground.withOpacity(0.8),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     hintText: 'Enter your password',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                      borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.9)),
+                      borderSide: BorderSide(color: colorScheme.primary),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 16,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: colorScheme.onBackground.withOpacity(0.6),
+                        size: 20,
+                      ),
+                      splashRadius: 20,
                     ),
                   ),
                   validator: (value) {
@@ -180,26 +199,39 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onBackground.withOpacity(0.8),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
+                  obscureText: !_isConfirmPasswordVisible,
                   decoration: InputDecoration(
                     hintText: 'Confirm your password',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                      borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.9)),
+                      borderSide: BorderSide(color: colorScheme.primary),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 16,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                        });
+                      },
+                      icon: Icon(
+                        _isConfirmPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: colorScheme.onBackground.withOpacity(0.6),
+                        size: 20,
+                      ),
+                      splashRadius: 20,
                     ),
                   ),
                   validator: (value) {
@@ -222,8 +254,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   child: ElevatedButton(
                     onPressed: _createAccount,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -246,7 +278,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   children: [
                     Expanded(
                       child: Divider(
-                        color: Theme.of(context).dividerColor,
+                        color: colorScheme.outline.withOpacity(0.5),
                         thickness: 1,
                       ),
                     ),
@@ -255,14 +287,14 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onBackground.withOpacity(0.6),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                     Expanded(
                       child: Divider(
-                        color: Theme.of(context).dividerColor,
+                        color: colorScheme.outline.withOpacity(0.5),
                         thickness: 1,
                       ),
                     ),
@@ -275,12 +307,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 SizedBox(
                   width: double.infinity,
                   height: 56,
-                      child: OutlinedButton(
+                  child: OutlinedButton(
                     onPressed: _signUpWithGoogle,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                      foregroundColor: colorScheme.onBackground.withOpacity(0.85),
                       side: BorderSide(
-                        color: Theme.of(context).dividerColor,
+                        color: colorScheme.outline.withOpacity(0.5),
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -317,15 +349,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: RichText(
                       text: TextSpan(
                         text: "Already have an account? ",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                        style: TextStyle(
+                          color: colorScheme.onBackground.withOpacity(0.65),
                           fontSize: 14,
                         ),
                         children: [
                           TextSpan(
                             text: 'Sign In here',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
+                              color: colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

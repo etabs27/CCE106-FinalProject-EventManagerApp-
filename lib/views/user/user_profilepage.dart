@@ -7,9 +7,9 @@ import 'package:event_manager_application_finalproject/views/user/user_explorepa
 import 'package:event_manager_application_finalproject/views/user/user_favoritepage.dart';
 import 'package:event_manager_application_finalproject/views/user/user_ticketpage.dart';
 import 'package:event_manager_application_finalproject/auth/login.dart';
-
-// Theme Provider for managing theme state
-
+import 'package:event_manager_application_finalproject/views/user/user_homepagenotification.dart';
+import 'package:event_manager_application_finalproject/views/user/user_profilepageeditprofile.dart'; 
+import 'package:event_manager_application_finalproject/views/user/user_profilepagepayment.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -120,21 +120,49 @@ class _ProfilePageState extends State<ProfilePage> {
               'Edit Profile',
               'Update your personal information',
               Icons.edit_rounded,
+              onTap: () {
+                // Navigate to Edit Profile Page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserProfilePageEditProfile()),
+                );
+              },
             ),
             _buildMenuOption(
               'My Bookings',
               'View your event bookings',
               Icons.book_online_rounded,
+              onTap: () {
+                // Navigate to Tickets Page (which shows bookings)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TicketsPage()),
+                );
+              },
             ),
             _buildMenuOption(
               'Payment Methods',
               'Manage your payment options',
               Icons.payment_rounded,
+              onTap: () {
+                // Navigate to Payment Methods Page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserProfilePagePayment()),
+                );
+              },
             ),
             _buildMenuOption(
               'Notifications',
               'Manage your notifications',
               Icons.notifications_rounded,
+              onTap: () {
+                // Navigate to UserHomePageNotification
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserHomePageNotification()),
+                );
+              },
             ),
 
             // Theme Switch
@@ -190,7 +218,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            // Log Out Button
+            // Log Out Button - Changed to use primary color (brown)
             Container(
               margin: EdgeInsets.only(top: 20),
               decoration: BoxDecoration(
@@ -210,12 +238,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: colorScheme.error.withOpacity(0.08),
+                    color: colorScheme.primary.withOpacity(0.1), // Changed to primary color
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.logout_rounded,
-                    color: colorScheme.error,
+                    color: colorScheme.primary, // Changed to primary color
                     size: 20,
                   ),
                 ),
@@ -224,7 +252,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: textTheme.bodyMedium?.copyWith(
                     fontSize: 16, 
                     fontWeight: FontWeight.w500, 
-                    color: colorScheme.error
+                    color: colorScheme.primary // Changed to primary color (brown)
                   ),
                 ),
                 trailing: Icon(
@@ -265,32 +293,17 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _toggleTheme(bool isDarkMode) {
-    // This function would typically use a ThemeProvider
-    // For now, we'll use a simple approach with a custom theme
-    // In a real app, you would use Provider, Riverpod, or another state management solution
-    
-    // You can implement theme switching logic here
-    // For example, using a shared preferences to save theme preference
-    
     // Toggle the shared ThemeProvider so the whole app switches themes
-    // (ThemeProvider is defined in main.dart and exposed at the app root)
     try {
       // Use Provider to flip the app theme
       Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
     } catch (_) {
-      // If provider is not available, proceed to show the snack (demo fallback)
+      // If provider is not available, silently handle the theme change
+      // No snackbar message will be shown
     }
-
-    // Show a message for user feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isDarkMode ? 'Dark theme enabled' : 'Light theme enabled'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
     
     // Note: Theme switching is performed with the top-level ThemeProvider.
+    // No success message will be shown when theme is changed.
   }
 
   void _navigateToIndex(int index) {
@@ -320,11 +333,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // Capture parent/page context so we can navigate after closing the dialog.
-    final pageContext = context;
-
     showDialog(
-      context: pageContext,
+      context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
           'Sign Out',
@@ -341,7 +351,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
               style: textTheme.bodyMedium?.copyWith(
@@ -351,39 +361,24 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
+              backgroundColor: colorScheme.primary, // Changed to primary color (brown)
+              foregroundColor: Colors.white, // White text for contrast
             ),
             onPressed: () {
-              // Close the dialog first, using the dialog's context
+              // Close the dialog first
               Navigator.pop(dialogContext);
-
-              // Show success message on the page context
-              ScaffoldMessenger.of(pageContext).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Signed out successfully',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onError,
-                    ),
-                  ),
-                  backgroundColor: colorScheme.error,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              );
               
-              // Navigate to login page immediately (remove previous routes)
-              Navigator.of(pageContext).pushAndRemoveUntil(
+              // Navigate to login page immediately without showing success message
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(builder: (_) => const LoginPage()),
-                (route) => false, // Remove all previous routes
+                (route) => false,
               );
             },
             child: Text(
               'Sign Out',
               style: textTheme.bodyMedium?.copyWith(
+                color: Colors.white, // White text for contrast
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -453,7 +448,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildMenuOption(String title, String subtitle, IconData icon) {
+  Widget _buildMenuOption(String title, String subtitle, IconData icon, {VoidCallback? onTap}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -472,8 +467,8 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       child: ListTile(
-        onTap: () {
-          // Add navigation logic for each menu option here
+        onTap: onTap ?? () {
+          // Default behavior if no onTap provided
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$title feature coming soon!'),
@@ -518,4 +513,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
