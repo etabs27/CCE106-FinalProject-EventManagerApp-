@@ -10,11 +10,49 @@ class ManagersDesign extends StatefulWidget {
 
 class _ManagersDesignState extends State<ManagersDesign> {
   String _currentFilter = 'All (24)';
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.hasClients 
+          ? _scrollController.offset 
+          : 0.0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Calculate background color based on scroll position
+    final double scrollThreshold = 50.0;
+    final double maxScroll = 150.0;
+    
+    double opacity = 0.0;
+    if (_scrollOffset > scrollThreshold) {
+      opacity = ((_scrollOffset - scrollThreshold) / maxScroll).clamp(0.0, 1.0);
+    }
+
+    final appBarColor = Color.lerp(
+      Colors.white,
+      theme.scaffoldBackgroundColor,
+      opacity,
+    )!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -26,66 +64,74 @@ class _ManagersDesignState extends State<ManagersDesign> {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: appBarColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
-        actions: [
-          // Filter Dropdown
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: colorScheme.primary.withOpacity(0.3),
-                ),
-              ),
+      ),
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              setState(() {
+                _scrollOffset = _scrollController.offset;
+              });
+            }
+          });
+          return false;
+        },
+        child: Column(
+          children: [
+            // Filter button row placed below AppBar - RIGHT ALIGNED
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Icon(
-                    Icons.filter_list_rounded,
-                    color: colorScheme.primary,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
+                  // Filter Button
                   Container(
-                    width: 80,
-                    child: _buildFilterDropdown(),
-                  ),
-                  const SizedBox(width: 2),
-                  Icon(
-                    Icons.arrow_drop_down_rounded,
-                    color: colorScheme.primary,
-                    size: 16,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 80,
+                          child: _buildFilterDropdown(),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          // Add Button
-          IconButton(
-            icon: Icon(
-              Icons.add_circle_rounded,
-              color: colorScheme.primary,
+            
+            // Search Bar
+            _buildSearchBar(context),
+            
+            // Managers List
+            Expanded(
+              child: _buildManagersList(context),
             ),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          _buildSearchBar(context),
-          
-          // Managers List
-          Expanded(
-            child: _buildManagersList(context),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -161,8 +207,8 @@ class _ManagersDesignState extends State<ManagersDesign> {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      color: colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      color: theme.scaffoldBackgroundColor,
       child: Container(
         decoration: BoxDecoration(
           color: colorScheme.surface,
@@ -171,7 +217,7 @@ class _ManagersDesignState extends State<ManagersDesign> {
         ),
         child: TextField(
           decoration: InputDecoration(
-            hintText: 'Search managers...',
+            hintText: 'Search...',
             prefixIcon: Icon(
               Icons.search_rounded,
               color: colorScheme.onBackground.withOpacity(0.6),
@@ -186,7 +232,8 @@ class _ManagersDesignState extends State<ManagersDesign> {
 
   Widget _buildManagersList(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       children: [
         _ManagerCard(
           name: 'Sarah Johnson',
@@ -209,6 +256,30 @@ class _ManagersDesignState extends State<ManagersDesign> {
           email: 'lisa.r@eventhub.com',
           status: 'Restricted',
           eventsCount: '3 events',
+          isRestricted: true,
+        ),
+        // Add more items for scrolling
+        _ManagerCard(
+          name: 'David Wilson',
+          email: 'david.w@eventhub.com',
+          status: 'Active',
+          eventsCount: '10 events',
+          isRestricted: false,
+        ),
+        const SizedBox(height: 12),
+        _ManagerCard(
+          name: 'Emily Brown',
+          email: 'emily.b@eventhub.com',
+          status: 'Active',
+          eventsCount: '6 events',
+          isRestricted: false,
+        ),
+        const SizedBox(height: 12),
+        _ManagerCard(
+          name: 'John Smith',
+          email: 'john.s@eventhub.com',
+          status: 'Restricted',
+          eventsCount: '2 events',
           isRestricted: true,
         ),
       ],

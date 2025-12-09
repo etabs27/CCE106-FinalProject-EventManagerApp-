@@ -1,13 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 
-class AllEventsDesign extends StatelessWidget {
+class AllEventsDesign extends StatefulWidget {
   const AllEventsDesign({super.key});
+
+  @override
+  State<AllEventsDesign> createState() => _AllEventsDesignState();
+}
+
+class _AllEventsDesignState extends State<AllEventsDesign> {
+  String _currentFilter = 'All (150)';
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.hasClients 
+          ? _scrollController.offset 
+          : 0.0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Calculate background color based on scroll position
+    final double scrollThreshold = 50.0;
+    final double maxScroll = 150.0;
+    
+    double opacity = 0.0;
+    if (_scrollOffset > scrollThreshold) {
+      opacity = ((_scrollOffset - scrollThreshold) / maxScroll).clamp(0.0, 1.0);
+    }
+
+    final appBarColor = Color.lerp(
+      Colors.white,
+      theme.scaffoldBackgroundColor,
+      opacity,
+    )!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -19,41 +64,150 @@ class AllEventsDesign extends StatelessWidget {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: appBarColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.filter_list_rounded, 
-              color: colorScheme.onBackground.withOpacity(0.6)
+      ),
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              setState(() {
+                _scrollOffset = _scrollController.offset;
+              });
+            }
+          });
+          return false;
+        },
+        child: Column(
+          children: [
+            // Filter button row placed below AppBar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 70,
+                          child: _buildFilterDropdown(),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          _buildSearchBar(context),
-          
-          // Filter Tabs
-          _buildFilterTabs(context),
-          
-          // Events List
-          Expanded(
-            child: _buildEventsList(context),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: colorScheme.primary,
-        child: Icon(
-          Icons.add_rounded, 
-          color: colorScheme.onPrimary, 
-          size: 24
+            
+            // Search Bar
+            _buildSearchBar(context),
+            
+            // Events List
+            Expanded(
+              child: _buildEventsList(context),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        icon: Container(width: 0, height: 0),
+        iconSize: 0,
+        elevation: 0,
+        isDense: true,
+        isExpanded: true,
+        style: TextStyle(
+          color: colorScheme.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        dropdownColor: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        items: [
+          DropdownMenuItem<String>(
+            value: 'All (150)',
+            child: Text(
+              'All (150)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Active (82)',
+            child: Text(
+              'Active (82)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Pending (7)',
+            child: Text(
+              'Pending (7)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Completed',
+            child: Text(
+              'Completed',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentFilter = newValue;
+            });
+          }
+        },
+        underline: Container(),
       ),
     );
   }
@@ -64,7 +218,7 @@ class AllEventsDesign extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      color: colorScheme.surface,
+      color: theme.scaffoldBackgroundColor,
       child: Container(
         decoration: BoxDecoration(
           color: colorScheme.surface,
@@ -86,56 +240,9 @@ class AllEventsDesign extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterTabs(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: colorScheme.surface,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildFilterTab(context, 'All (150)', true),
-            const SizedBox(width: 12),
-            _buildFilterTab(context, 'Active (82)', false),
-            const SizedBox(width: 12),
-            _buildFilterTab(context, 'Pending (7)', false),
-            const SizedBox(width: 12),
-            _buildFilterTab(context, 'Completed', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterTab(BuildContext context, String label, bool active) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? colorScheme.primary.withOpacity(0.06) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: active ? colorScheme.primary.withOpacity(0.2) : colorScheme.outline.withOpacity(0.3),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? colorScheme.primary : colorScheme.onBackground.withOpacity(0.7),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
   Widget _buildEventsList(BuildContext context) {
     return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(20),
       children: [
         // Active Event
@@ -161,6 +268,42 @@ class AllEventsDesign extends StatelessWidget {
           managerName: 'Mike Chen',
           registeredCount: '850',
           totalCapacity: '1,000',
+          checkedInCount: null,
+          isPending: true,
+        ),
+        // Add more items for scrolling
+        _EventCard(
+          status: 'Active',
+          category: 'Art',
+          title: 'Art Exhibition',
+          date: 'Dec 28, 2024 - 10:00 AM',
+          managerName: 'Lisa Rodriguez',
+          registeredCount: '500',
+          totalCapacity: '800',
+          checkedInCount: '320',
+          isPending: false,
+        ),
+        const SizedBox(height: 16),
+        _EventCard(
+          status: 'Completed',
+          category: 'Food',
+          title: 'Food Festival',
+          date: 'Nov 15, 2024 - 11:00 AM',
+          managerName: 'Alex Chen',
+          registeredCount: '1,200',
+          totalCapacity: '1,500',
+          checkedInCount: '1,150',
+          isPending: false,
+        ),
+        const SizedBox(height: 16),
+        _EventCard(
+          status: 'Pending',
+          category: 'Education',
+          title: 'Tech Workshop',
+          date: 'Jan 10, 2025 - 2:00 PM',
+          managerName: 'David Kim',
+          registeredCount: '150',
+          totalCapacity: '300',
           checkedInCount: null,
           isPending: true,
         ),
@@ -354,7 +497,7 @@ class _EventCard extends StatelessWidget {
           ),
         ],
       ),
-    ); // ← ADDED THIS CLOSING BRACE
+    );
   }
 
   Widget _buildActiveStats(ColorScheme colorScheme) {

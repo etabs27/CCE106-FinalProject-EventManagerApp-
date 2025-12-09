@@ -10,11 +10,49 @@ class EventApprovalsDesign extends StatefulWidget {
 
 class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
   String _currentFilter = 'All (7)';
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.hasClients 
+          ? _scrollController.offset 
+          : 0.0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Calculate background color based on scroll position
+    final double scrollThreshold = 50.0; // When to start changing color
+    final double maxScroll = 150.0; // When color change is complete
+    
+    double opacity = 0.0;
+    if (_scrollOffset > scrollThreshold) {
+      opacity = ((_scrollOffset - scrollThreshold) / maxScroll).clamp(0.0, 1.0);
+    }
+
+    final appBarColor = Color.lerp(
+      Colors.white, // Starting color (white)
+      theme.scaffoldBackgroundColor, // Target color (background)
+      opacity,
+    )!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -26,61 +64,74 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: appBarColor, // Dynamic color based on scroll
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
       ),
-      body: Column(
-        children: [
-          // Filter button row placed below AppBar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.3),
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          // This ensures the scroll offset is updated for the AppBar color
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              setState(() {
+                _scrollOffset = _scrollController.offset;
+              });
+            }
+          });
+          return false;
+        },
+        child: Column(
+          children: [
+            // Filter button row placed below AppBar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 60,
+                          child: _buildFilterDropdown(),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.filter_list_rounded,
-                        color: colorScheme.primary,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 60, // Width to accommodate filter text
-                        child: _buildFilterDropdown(),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.arrow_drop_down_rounded,
-                        color: colorScheme.primary,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          // Header with stats
-          _buildHeaderStats(context),
-          
-          // Events List
-          Expanded(
-            child: _buildEventsList(context),
-          ),
-        ],
+            
+            // Header with stats
+            _buildHeaderStats(context),
+            
+            // Events List with ScrollController
+            Expanded(
+              child: _buildEventsList(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -233,6 +284,7 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
 
   Widget _buildEventsList(BuildContext context) {
     return ListView(
+      controller: _scrollController, // Added ScrollController
       padding: const EdgeInsets.all(20),
       children: [
         // Urgent Event
@@ -258,6 +310,39 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
           submittedTime: '5 hours ago',
           isUrgent: false,
           daysLeft: 8,
+        ),
+        // Add more items to make scrolling noticeable
+        _EventCard(
+          title: 'Art Exhibition',
+          date: 'Dec 28, 2024',
+          time: '10:00 AM',
+          managerName: 'Lisa Rodriguez',
+          capacity: '500 attendees',
+          submittedTime: '1 day ago',
+          isUrgent: false,
+          daysLeft: 11,
+        ),
+        const SizedBox(height: 16),
+        _EventCard(
+          title: 'Food Festival',
+          date: 'Jan 5, 2025',
+          time: '11:00 AM',
+          managerName: 'Alex Chen',
+          capacity: '1,500 attendees',
+          submittedTime: '3 days ago',
+          isUrgent: true,
+          daysLeft: 5,
+        ),
+        const SizedBox(height: 16),
+        _EventCard(
+          title: 'Tech Workshop',
+          date: 'Jan 10, 2025',
+          time: '2:00 PM',
+          managerName: 'David Kim',
+          capacity: '300 attendees',
+          submittedTime: '1 week ago',
+          isUrgent: false,
+          daysLeft: 15,
         ),
       ],
     );

@@ -1,13 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 
-class UserManagementDesign extends StatelessWidget {
+class UserManagementDesign extends StatefulWidget {
   const UserManagementDesign({super.key});
+
+  @override
+  State<UserManagementDesign> createState() => _UserManagementDesignState();
+}
+
+class _UserManagementDesignState extends State<UserManagementDesign> {
+  String _currentFilter = 'All Users';
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.hasClients 
+          ? _scrollController.offset 
+          : 0.0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Calculate background color based on scroll position
+    final double scrollThreshold = 50.0;
+    final double maxScroll = 150.0;
+    
+    double opacity = 0.0;
+    if (_scrollOffset > scrollThreshold) {
+      opacity = ((_scrollOffset - scrollThreshold) / maxScroll).clamp(0.0, 1.0);
+    }
+
+    final appBarColor = Color.lerp(
+      Colors.white,
+      theme.scaffoldBackgroundColor,
+      opacity,
+    )!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -19,48 +64,175 @@ class UserManagementDesign extends StatelessWidget {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: appBarColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.filter_list_rounded, 
-              color: colorScheme.onBackground.withOpacity(0.6)
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.more_vert_rounded, 
-              color: colorScheme.onBackground.withOpacity(0.6)
-            ),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          // Header Stats
-          _buildStatsHeader(context),
-          
-          // Search and Filters
-          _buildSearchSection(context),
-          
-          // Users List
-          Expanded(
-            child: _buildUsersList(context),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: colorScheme.primary,
-        child: Icon(
-          Icons.person_add_rounded, 
-          color: colorScheme.onPrimary, 
-          size: 24
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              setState(() {
+                _scrollOffset = _scrollController.offset;
+              });
+            }
+          });
+          return false;
+        },
+        child: Column(
+          children: [
+            // Filter button row placed below AppBar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 70,
+                          child: _buildFilterDropdown(),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: colorScheme.primary,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Header Stats
+            _buildStatsHeader(context),
+            
+            // Search and Filters
+            _buildSearchSection(context),
+            
+            // Users List
+            Expanded(
+              child: _buildUsersList(context),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        icon: Container(width: 0, height: 0),
+        iconSize: 0,
+        elevation: 0,
+        isDense: true,
+        isExpanded: true,
+        style: TextStyle(
+          color: colorScheme.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        dropdownColor: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        items: [
+          DropdownMenuItem<String>(
+            value: 'All Users',
+            child: Text(
+              'All Users',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Admins',
+            child: Text(
+              'Admins',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Managers',
+            child: Text(
+              'Managers',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Attendees',
+            child: Text(
+              'Attendees',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Active',
+            child: Text(
+              'Active',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Suspended',
+            child: Text(
+              'Suspended',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentFilter = newValue;
+            });
+          }
+        },
+        underline: Container(),
       ),
     );
   }
@@ -73,12 +245,12 @@ class UserManagementDesign extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: theme.scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
             color: colorScheme.onSurface.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -88,7 +260,6 @@ class UserManagementDesign extends StatelessWidget {
           _buildStatItem('Total Users', '8,542', Icons.people_alt_rounded, colorScheme),
           _buildStatItem('Active', '7,892', Icons.check_circle_rounded, colorScheme),
           _buildStatItem('Managers', '24', Icons.manage_accounts_rounded, colorScheme),
-          _buildStatItem('Pending', '12', Icons.pending_actions_rounded, colorScheme),
         ],
       ),
     );
@@ -114,7 +285,7 @@ class UserManagementDesign extends StatelessWidget {
             size: 28
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
@@ -123,7 +294,7 @@ class UserManagementDesign extends StatelessWidget {
             color: colorScheme.onBackground,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           title,
           style: TextStyle(
@@ -142,7 +313,7 @@ class UserManagementDesign extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      color: colorScheme.surface,
+      color: theme.scaffoldBackgroundColor,
       child: Column(
         children: [
           // Search Bar
@@ -154,7 +325,7 @@ class UserManagementDesign extends StatelessWidget {
             ),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search users by name or email...',
+                hintText: 'Search...',
                 prefixIcon: Icon(
                   Icons.search_rounded, 
                   color: colorScheme.onBackground.withOpacity(0.6)
@@ -164,61 +335,15 @@ class UserManagementDesign extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          
-          // Filter Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterChip('All Users', true, colorScheme),
-                const SizedBox(width: 8),
-                _buildFilterChip('Admins', false, colorScheme),
-                const SizedBox(width: 8),
-                _buildFilterChip('Managers', false, colorScheme),
-                const SizedBox(width: 8),
-                _buildFilterChip('Attendees', false, colorScheme),
-                const SizedBox(width: 8),
-                _buildFilterChip('Active', false, colorScheme),
-                const SizedBox(width: 8),
-                _buildFilterChip('Suspended', false, colorScheme),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected, ColorScheme colorScheme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: selected ? colorScheme.primary.withOpacity(0.06) : colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selected ? colorScheme.primary.withOpacity(0.2) : colorScheme.outline.withOpacity(0.3),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? colorScheme.primary : colorScheme.onBackground.withOpacity(0.7),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildUsersList(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return ListView(
-      padding: const EdgeInsets.all(20),
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       children: [
         _UserCard(
           name: 'Sarah Johnson',
@@ -269,6 +394,26 @@ class UserManagementDesign extends StatelessWidget {
           lastActive: '1 month ago',
           eventsCount: '2 events',
         ),
+        // Add more items for scrolling
+        _UserCard(
+          name: 'David Wilson',
+          email: 'david.w@example.com',
+          role: 'Attendee',
+          status: 'Active',
+          joinDate: 'Feb 10, 2024',
+          lastActive: '3 days ago',
+          eventsCount: '5 events',
+        ),
+        const SizedBox(height: 12),
+        _UserCard(
+          name: 'Maria Garcia',
+          email: 'maria.g@example.com',
+          role: 'Manager',
+          status: 'Active',
+          joinDate: 'Mar 15, 2024',
+          lastActive: '5 hours ago',
+          eventsCount: '10 events',
+        ),
       ],
     );
   }
@@ -299,40 +444,40 @@ class _UserCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     // Determine colors based on role and status
-    final roleColor = colorScheme.primary; // All roles use primary color
+    final roleColor = colorScheme.primary;
     final statusColor = _getStatusColor(colorScheme);
 
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: colorScheme.onSurface.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             // User Avatar
             Container(
-              width: 60,
-              height: 60,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: roleColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _getRoleIcon(role),
                 color: roleColor,
-                size: 28,
+                size: 24,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             
             // User Info
             Expanded(
@@ -341,83 +486,91 @@ class _UserCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onBackground,
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onBackground,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           status,
                           style: TextStyle(
                             color: statusColor,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     email,
                     style: TextStyle(
                       color: colorScheme.onBackground.withOpacity(0.6),
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: roleColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           role,
                           style: TextStyle(
                             color: roleColor,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Text(
                         '•',
                         style: TextStyle(
                           color: colorScheme.onBackground.withOpacity(0.2),
-                          fontSize: 12,
+                          fontSize: 10,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Joined $joinDate',
-                        style: TextStyle(
-                          color: colorScheme.onBackground.withOpacity(0.5),
-                          fontSize: 12,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Joined $joinDate',
+                          style: TextStyle(
+                            color: colorScheme.onBackground.withOpacity(0.5),
+                            fontSize: 11,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     '$eventsCount • Last active $lastActive',
                     style: TextStyle(
                       color: colorScheme.onBackground.withOpacity(0.5),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -425,6 +578,8 @@ class _UserCard extends StatelessWidget {
             
             // Actions Menu
             IconButton(
+              iconSize: 20,
+              padding: EdgeInsets.zero,
               icon: Icon(
                 Icons.more_vert_rounded, 
                 color: colorScheme.onBackground.withOpacity(0.4)
@@ -453,13 +608,13 @@ class _UserCard extends StatelessWidget {
   Color _getStatusColor(ColorScheme colorScheme) {
     switch (status.toLowerCase()) {
       case 'active':
-        return colorScheme.primary; // Use primary color for active
+        return colorScheme.primary;
       case 'suspended':
-        return colorScheme.error; // Use error color for suspended
+        return colorScheme.error;
       case 'inactive':
-        return colorScheme.primary.withOpacity(0.7); // Use primary with opacity for inactive
+        return colorScheme.primary.withOpacity(0.7);
       default:
-        return colorScheme.primary; // Default to primary color
+        return colorScheme.primary;
     }
   }
 }
