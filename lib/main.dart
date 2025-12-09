@@ -1,8 +1,11 @@
 import 'package:event_manager_application_finalproject/homepage.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 import 'package:event_manager_application_finalproject/auth/login.dart';
+import 'package:event_manager_application_finalproject/auth/auth_gate.dart';
 
 
 class ThemeProvider extends ChangeNotifier {
@@ -21,7 +24,12 @@ class ThemeProvider extends ChangeNotifier {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
@@ -43,7 +51,7 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.buildLightTheme(),
           darkTheme: AppTheme.buildDarkTheme(), 
           themeMode: themeProvider.themeMode, 
-          home: HomePageWidget(),
+          home: const AuthGate(),
         );
       },
     );

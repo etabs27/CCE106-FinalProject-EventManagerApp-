@@ -69,7 +69,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '724098486280',
     projectId: 'eventmanagerapp-4iv8qf',
     storageBucket: 'eventmanagerapp-4iv8qf.firebasestorage.app',
+    androidClientId: '724098486280-hsgrmeq2f293i0l1ggvlel21vhma2ghk.apps.googleusercontent.com',
     iosClientId: '724098486280-2c79dokm9o7fb2r24pgmsks35evdqm76.apps.googleusercontent.com',
     iosBundleId: 'com.example.eventManagerApplicationFinalproject',
   );
+
 }

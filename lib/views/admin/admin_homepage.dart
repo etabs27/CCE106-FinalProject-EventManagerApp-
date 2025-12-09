@@ -4,6 +4,9 @@ import 'package:event_manager_application_finalproject/theme.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_managers.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_allevents.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_usermanagement.dart';
+import 'package:event_manager_application_finalproject/views/admin/admin_notificationpage.dart'; // Add this
+import 'package:event_manager_application_finalproject/views/admin/admin_settings.dart'; // Add this
+import 'package:event_manager_application_finalproject/auth/login.dart'; // Import login page
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -21,14 +24,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: colorScheme.surface,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'Dashboard',
+          style: textTheme.titleLarge?.copyWith(
+            color: colorScheme.onBackground,
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+          ),
+        ),
+        elevation: 0,
+        actions: [
+          // Notification Icon
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                // Navigate to Admin Notification Page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminNotificationPage()),
+                );
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primary.withOpacity(0.1),
+                ),
+                child: Icon(
+                  Icons.notifications_none,
+                  color: colorScheme.onBackground.withOpacity(0.7),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Profile with dropdown
+          _buildProfileDropdown(),
+          const SizedBox(width: 16),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              _buildHeader(),
-              
               // Stats Grid
               _buildStatsGrid(),
               
@@ -38,7 +83,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               // Recent Activity
               _buildRecentActivity(),
               
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -46,79 +91,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildHeader() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'System Administrator',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: colorScheme.onBackground.withOpacity(0.6),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Admin Panel',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onBackground,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colorScheme.primary.withOpacity(0.1),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.notifications,
-                    color: colorScheme.onBackground.withOpacity(0.6),
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    // Notifications action
-                  },
-                ),
-              ),
-              SizedBox(width: 12),
-              // Profile with dropdown
-              _buildProfileDropdown(),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProfileDropdown() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return PopupMenuButton<String>(
       onSelected: (value) {
         if (value == 'settings') {
-          // Handle settings
-          print('Settings clicked');
+          // Navigate to Admin Settings Page
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminSettingsPage()),
+          );
         } else if (value == 'signout') {
           // Handle sign out
-          print('Sign out clicked');
+          _showSignOutConfirmation();
         }
       },
       itemBuilder: (BuildContext context) => [
@@ -127,14 +115,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Row(
             children: [
               Icon(
-                Icons.settings, 
+                Icons.settings_rounded, 
                 size: 20, 
                 color: colorScheme.onBackground.withOpacity(0.6)
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
                 'Settings',
-                style: TextStyle(
+                style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onBackground,
                 ),
               ),
@@ -146,14 +134,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Row(
             children: [
               Icon(
-                Icons.logout, 
+                Icons.logout_rounded, 
                 size: 20, 
                 color: colorScheme.onBackground.withOpacity(0.6)
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
                 'Sign Out',
-                style: TextStyle(
+                style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onBackground,
                 ),
               ),
@@ -169,9 +157,74 @@ class _AdminDashboardState extends State<AdminDashboard> {
           color: colorScheme.primary.withOpacity(0.1),
         ),
         child: Icon(
-          Icons.person,
+          Icons.person_rounded,
           color: colorScheme.primary,
+          size: 20,
         ),
+      ),
+    );
+  }
+
+  void _showSignOutConfirmation() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Sign Out',
+          style: textTheme.titleLarge?.copyWith(
+            color: colorScheme.onBackground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to sign out?',
+          style: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onBackground.withOpacity(0.7),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onBackground.withOpacity(0.7),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              // Close the dialog first
+              Navigator.pop(dialogContext);
+              
+              // Navigate to login page and remove all routes
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            child: Text(
+              'Sign Out',
+              style: textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        backgroundColor: colorScheme.surface,
       ),
     );
   }
@@ -181,37 +234,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
       child: GridView(
         padding: EdgeInsets.zero,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           childAspectRatio: 1.2,
         ),
         shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         children: [
           _buildStatCard(
             'Total Events',
             '156',
-            Icons.event,
+            Icons.event_available_rounded,
           ),
           _buildStatCard(
             'Active Managers',
             '24',
-            Icons.people,
+            Icons.people_alt_rounded,
           ),
           _buildStatCard(
             'Total Users',
             '8,542',
-            Icons.person_outline,
+            Icons.person_outline_rounded,
           ),
           _buildStatCard(
             'Pending Approvals',
             '7',
-            Icons.pending_actions,
+            Icons.pending_actions_rounded,
           ),
         ],
       ),
@@ -221,6 +274,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildStatCard(String title, String value, IconData icon) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Container(
       decoration: BoxDecoration(
@@ -230,12 +284,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           BoxShadow(
             color: colorScheme.onSurface.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -250,7 +304,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: Icon(
                 icon,
                 color: colorScheme.primary,
-                size: 24,
+                size: 20,
               ),
             ),
             Column(
@@ -258,16 +312,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onBackground.withOpacity(0.65),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   value,
-                  style: TextStyle(
+                  style: textTheme.titleLarge?.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onBackground,
@@ -284,59 +338,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildQuickActions() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Padding(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Quick Actions',
-            style: TextStyle(
+            style: textTheme.titleLarge?.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: colorScheme.onBackground,
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _buildQuickActionCard(
                   'Event Approvals',
                   '7 pending',
-                  Icons.approval,
+                  Icons.pending_actions_rounded,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventApprovalsDesign())),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionCard(
                   'Managers',
                   '24 active',
-                  Icons.manage_accounts,
+                  Icons.people_rounded,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagersDesign())),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _buildQuickActionCard(
                   'All Events',
                   '156 events',
-                  Icons.event_available,
+                  Icons.event_rounded,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsDesign())),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionCard(
                   'User Management',
                   '8,542 users',
-                  Icons.people_outline,
+                  Icons.person_rounded,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementDesign())),
                 ),
               ),
@@ -350,6 +405,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildQuickActionCard(String title, String subtitle, IconData icon, {VoidCallback? onTap}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return InkWell(
       onTap: onTap,
@@ -362,14 +418,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
             BoxShadow(
               color: colorScheme.onSurface.withOpacity(0.05),
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Icon
               Container(
                 width: 48,
                 height: 48,
@@ -383,34 +441,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   size: 24,
                 ),
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onBackground,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: colorScheme.onBackground.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onBackground,
+                  fontSize: 16,
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: colorScheme.onBackground.withOpacity(0.4),
-                size: 16,
+              const SizedBox(height: 4),
+              // Subtitle
+              Text(
+                subtitle,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onBackground.withOpacity(0.6),
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -422,9 +470,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildRecentActivity() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Padding(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -434,12 +483,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             BoxShadow(
               color: colorScheme.onSurface.withOpacity(0.05),
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Padding(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -448,7 +497,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 children: [
                   Text(
                     'Recent Activity',
-                    style: TextStyle(
+                    style: textTheme.titleLarge?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onBackground,
@@ -456,37 +505,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   Text(
                     'View all',
-                    style: TextStyle(
+                    style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.primary,
-                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildActivityItem(
                 'Event "Jazz Night" approved',
                 '2 minutes ago',
-                Icons.check_circle,
+                Icons.check_circle_rounded,
               ),
               _buildDivider(),
               _buildActivityItem(
                 'New manager added: John Smith',
                 '1 hour ago',
-                Icons.person_add,
+                Icons.person_add_rounded,
               ),
               _buildDivider(),
               _buildActivityItem(
                 'Event "Food Fest" rejected',
                 '3 hours ago',
-                Icons.cancel,
+                Icons.cancel_rounded,
               ),
               _buildDivider(),
               _buildActivityItem(
                 'New event created: "Tech Conference"',
                 '5 hours ago',
-                Icons.event,
+                Icons.event_available_rounded,
               ),
             ],
           ),
@@ -498,9 +546,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildActivityItem(String title, String time, IconData icon) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Container(
@@ -516,25 +565,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
               size: 20,
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: colorScheme.onBackground,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   time,
-                  style: TextStyle(
+                  style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onBackground.withOpacity(0.6),
-                    fontSize: 12,
                   ),
                 ),
               ],

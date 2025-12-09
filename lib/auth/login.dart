@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/auth/signup.dart'; 
 import 'package:event_manager_application_finalproject/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:event_manager_application_finalproject/views/user/user_homepage.dart';
 import 'package:event_manager_application_finalproject/views/manager/manager_homepage.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_homepage.dart';
@@ -17,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true; // State variable for password visibility
+  bool _isSigningIn = false;
 
   @override
   void dispose() {
@@ -28,35 +31,106 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_isSigningIn) return;
+    setState(() => _isSigningIn = true);
+
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    final role = await AuthService.signIn(email, password);
-    if (role == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid credentials — try a test account listed below.')),
-      );
-      return;
-    }
+    try {
+      final auth = FirebaseAuth.instance;
+      final userCred = await auth.signInWithEmailAndPassword(email: email, password: password);
+      final user = userCred.user;
+      if (user == null) throw FirebaseAuthException(code: 'no-user', message: 'No user returned');
 
-    // Navigate to the matching dashboard
-    if (role == 'admin') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
-      return;
-    }
+      // Look up role in Firestore (if present). If the stored role is 'user'
+      // but the email matches the manager/admin patterns, upgrade it so
+      // existing signups like maressah@davaoevents.com receive the correct role.
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      final docRef = usersRef.doc(user.uid);
+      final doc = await docRef.get();
+      String role;
+      final derivedRole = AuthService.determineRoleFromEmail(email);
+      if (doc.exists && doc.data()?['role'] != null) {
+        role = doc.data()!['role'] as String;
+        // If stored role is 'user' but derivedRole is manager/admin, upgrade it.
+        if (role == 'user' && (derivedRole == 'manager' || derivedRole == 'admin')) {
+          role = derivedRole;
+          await docRef.set({
+            'role': role,
+          }, SetOptions(merge: true));
+        }
+      } else {
+        role = derivedRole;
+        await docRef.set({
+          'email': email,
+          'role': role,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
 
-    if (role == 'manager') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManagerDashboard()));
-      return;
+      // Navigate to correct dashboard
+      if (role == 'admin') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
+      } else if (role == 'manager') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManagerDashboard()));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserHomePageWidget()));
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Sign in failed.';
+      if (e.code == 'user-not-found') message = 'No user found for that email.';
+      if (e.code == 'wrong-password') message = 'Incorrect password.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in failed.')));
+    } finally {
+      setState(() => _isSigningIn = false);
     }
-
-    // default -> user
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserHomePageWidget()));
   }
 
-  void _signInWithGoogle() {
-    // Handle Google sign in logic here
-    print('Sign in with Google');
+  Future<void> _signInWithGoogle() async {
+    if (_isSigningIn) return;
+    setState(() => _isSigningIn = true);
+    try {
+      await AuthService.signInWithGoogle();
+      final current = FirebaseAuth.instance.currentUser;
+      if (current == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in failed or was cancelled.')));
+        setState(() => _isSigningIn = false);
+        return;
+      }
+
+      final email = current.email ?? '';
+      // Ensure a users doc exists with role
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      final doc = await usersRef.doc(current.uid).get();
+      String role;
+      if (doc.exists && doc.data()?['role'] != null) {
+        role = doc.data()!['role'] as String;
+      } else {
+        role = AuthService.determineRoleFromEmail(email);
+        await usersRef.doc(current.uid).set({
+          'email': email,
+          'role': role,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      if (role == 'admin') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
+      } else if (role == 'manager') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManagerDashboard()));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserHomePageWidget()));
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('LoginPage._signInWithGoogle error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in failed.')));
+    } finally {
+      setState(() => _isSigningIn = false);
+    }
   }
 
   void _navigateToSignUp() {
@@ -271,7 +345,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 56,
                   child: OutlinedButton(
-                    onPressed: _signInWithGoogle,
+                    onPressed: _isSigningIn ? null : _signInWithGoogle,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                       side: BorderSide(
@@ -282,24 +356,30 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/images/google-removebg-preview.png',
-                          width: 30, 
-                          height: 30,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Continue with Google',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                    child: _isSigningIn
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/google-removebg-preview.png',
+                                width: 30,
+                                height: 30,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:event_manager_application_finalproject/auth/login.dart'; // Update with your actual login page import
+import 'package:event_manager_application_finalproject/auth/login.dart'; 
 
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -13,7 +13,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
   late PageController _pageController;
   int _currentPage = 0;
 
-  // List of image assets - MEETRIX.jpg added as first page
+  
   final List<String> _imageAssets = [
     'assets/images/MEETRIX.jpg',
     'assets/images/GridView1.png',
@@ -21,7 +21,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     'assets/images/GridView3.png',
   ];
 
-  // List of titles for each page - added title for MEETRIX page
+  
   final List<String> _titles = [
     '',
     'Plan Events with Ease',
@@ -29,7 +29,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     'Ready to Get Started?',
   ];
 
-  // List of descriptions for each page - added description for MEETRIX page
+  
   final List<String> _descriptions = [
     '',
     'Create, organize, and manage events effortlessly with our intuitive tools',
@@ -61,35 +61,35 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         curve: Curves.ease,
       );
     } else {
-      // Navigate to login page
+      
       _navigateToLogin();
     }
   }
 
   void _skipOnboarding() {
-    // Navigate to login page
+    
     _navigateToLogin();
   }
 
   void _navigateToLogin() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const LoginPage()), // Update with your actual login page class
+      MaterialPageRoute(builder: (context) => const LoginPage()), 
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Calculate 1 inch border (approximately 96 logical pixels)
+    
     final double oneInchBorder = 96.0;
 
     return Scaffold(
-      // Use the app's scaffold background from the theme (matches logo background)
+
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
-            // Skip Button
+            
             Positioned(
               top: 16,
               right: 16,
@@ -121,9 +121,9 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                   color: Theme.of(context).scaffoldBackgroundColor,
                   child: Stack(
                     children: [
-                      // Background Image - Different layout for first image vs others
+                      
                       if (index == 0)
-                        // First image: no borders, fit to width
+                        
                         Image.asset(
                           _imageAssets[index],
                           width: double.infinity,
@@ -144,7 +144,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                           },
                         )
                       else
-                        // Other images: with top and bottom borders, cover fit
+                        
                         Container(
                           margin: EdgeInsets.only(
                             top: oneInchBorder,
@@ -171,7 +171,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                           ),
                         ),
                       
-                      // Gradient overlay - only for images with borders (index 1,2,3)
+                      
                       if (index > 0)
                         Container(
                           margin: EdgeInsets.only(
@@ -190,7 +190,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                           ),
                         ),
                       
-                      // Content
+                      
                       Padding(
                         padding: const EdgeInsets.all(24.0),
                         child: Column(
@@ -236,14 +236,14 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               }),
             ),
             
-            // Page Indicator - Updated count to 4
+            
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 100),
                 child: SmoothPageIndicator(
                   controller: _pageController,
-                  count: _imageAssets.length, // Now 4 pages
+                  count: _imageAssets.length, 
                   effect: ExpandingDotsEffect(
                     spacing: 8,
                     radius: 8,
@@ -264,7 +264,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               ),
             ),
             
-            // Continue Button
+            
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(

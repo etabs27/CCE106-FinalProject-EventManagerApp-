@@ -1,5 +1,11 @@
 import 'package:event_manager_application_finalproject/auth/login.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:event_manager_application_finalproject/auth_service.dart';
+// Note: we no longer navigate directly to dashboards from sign-up;
+// login will handle routing after authentication.
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -26,15 +32,56 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void _createAccount() {
-    if (_formKey.currentState!.validate()) {
-      // Handle sign up logic here
-      print('Create account with: ${_emailController.text}');
+    _createAccountAsync();
+  }
+
+  Future<void> _createAccountAsync() async {
+    if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    setState(() {});
+    try {
+      final auth = FirebaseAuth.instance;
+      final userCred = await auth.createUserWithEmailAndPassword(email: email, password: password);
+      final user = userCred.user;
+      if (user == null) throw FirebaseAuthException(code: 'unknown', message: 'No user returned');
+
+      // Determine role and store user record in Firestore
+      final role = AuthService.determineRoleFromEmail(email);
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      await usersRef.doc(user.uid).set({
+        'email': email,
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // After creating the account, sign the user out and navigate to login
+      await FirebaseAuth.instance.signOut();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created — please sign in.')));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    } on FirebaseAuthException catch (e) {
+      var message = 'Sign up failed.';
+      if (e.code == 'weak-password') message = 'The password is too weak.';
+      if (e.code == 'email-already-in-use') message = 'The email is already in use.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign up failed.')));
     }
   }
 
   void _signUpWithGoogle() {
-    // Handle Google sign up logic here
-    print('Sign up with Google');
+    _signUpWithGoogleAsync();
+  }
+
+  Future<void> _signUpWithGoogleAsync() async {
+    // Reuse AuthService to sign in with Google; Firestore doc will be created/updated on sign-in
+    final role = await AuthService.signInWithGoogle();
+    if (role == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-up failed or cancelled.')));
+      return;
+    }
+
+    // After sign-in the AuthGate or app-level listener will route the user.
   }
 
   void _navigateToSignIn() {

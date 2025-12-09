@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 
-class EventApprovalsDesign extends StatelessWidget {
+class EventApprovalsDesign extends StatefulWidget {
   const EventApprovalsDesign({super.key});
+
+  @override
+  State<EventApprovalsDesign> createState() => _EventApprovalsDesignState();
+}
+
+class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
+  String _currentFilter = 'All (7)';
 
   @override
   Widget build(BuildContext context) {
@@ -19,32 +26,127 @@ class EventApprovalsDesign extends StatelessWidget {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.sort_rounded, 
-              color: colorScheme.onBackground.withOpacity(0.6)
-            ),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
+          // Filter button row placed below AppBar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.filter_list_rounded,
+                        color: colorScheme.primary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 60, // Width to accommodate filter text
+                        child: _buildFilterDropdown(),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        color: colorScheme.primary,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
           // Header with stats
           _buildHeaderStats(context),
-          
-          // Filter Tabs
-          _buildFilterTabs(context),
           
           // Events List
           Expanded(
             child: _buildEventsList(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        icon: Container(width: 0, height: 0),
+        iconSize: 0,
+        elevation: 0,
+        isDense: true,
+        isExpanded: true,
+        style: TextStyle(
+          color: colorScheme.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        dropdownColor: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        items: [
+          DropdownMenuItem<String>(
+            value: 'All (7)',
+            child: Text(
+              'All (7)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Urgent (2)',
+            child: Text(
+              'Urgent (2)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Today (5)',
+            child: Text(
+              'Today (5)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentFilter = newValue;
+            });
+          }
+        },
+        underline: Container(),
       ),
     );
   }
@@ -57,7 +159,7 @@ class EventApprovalsDesign extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: theme.scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
             color: colorScheme.onSurface.withOpacity(0.05),
@@ -81,7 +183,7 @@ class EventApprovalsDesign extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.06),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
             ),
@@ -125,49 +227,6 @@ class EventApprovalsDesign extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTabs(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: colorScheme.surface,
-      child: Row(
-        children: [
-          _buildFilterTab(context, 'All (7)', true),
-          const SizedBox(width: 16),
-          _buildFilterTab(context, 'Urgent (2)', false),
-          const SizedBox(width: 16),
-          _buildFilterTab(context, 'Today (5)', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTab(BuildContext context, String label, bool active) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? colorScheme.primary.withOpacity(0.06) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: active ? colorScheme.primary.withOpacity(0.2) : colorScheme.outline.withOpacity(0.3),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? colorScheme.primary : colorScheme.onBackground.withOpacity(0.7),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }

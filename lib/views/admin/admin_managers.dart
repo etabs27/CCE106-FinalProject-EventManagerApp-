@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 
-class ManagersDesign extends StatelessWidget {
+class ManagersDesign extends StatefulWidget {
   const ManagersDesign({super.key});
+
+  @override
+  State<ManagersDesign> createState() => _ManagersDesignState();
+}
+
+class _ManagersDesignState extends State<ManagersDesign> {
+  String _currentFilter = 'All (24)';
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +30,47 @@ class ManagersDesign extends StatelessWidget {
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
         actions: [
+          // Filter Dropdown
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.filter_list_rounded,
+                    color: colorScheme.primary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Container(
+                    width: 80,
+                    child: _buildFilterDropdown(),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: colorScheme.primary,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Add Button
           IconButton(
             icon: Icon(
-              Icons.add_circle_rounded, 
-              color: colorScheme.primary
+              Icons.add_circle_rounded,
+              color: colorScheme.primary,
             ),
             onPressed: () {},
           ),
@@ -37,14 +81,77 @@ class ManagersDesign extends StatelessWidget {
           // Search Bar
           _buildSearchBar(context),
           
-          // Filter Tabs
-          _buildFilterTabs(context),
-          
           // Managers List
           Expanded(
             child: _buildManagersList(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        icon: Container(width: 0, height: 0),
+        iconSize: 0,
+        elevation: 0,
+        isDense: true,
+        isExpanded: true,
+        style: TextStyle(
+          color: colorScheme.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        dropdownColor: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        items: [
+          DropdownMenuItem<String>(
+            value: 'All (24)',
+            child: Text(
+              'All (24)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Active (22)',
+            child: Text(
+              'Active (22)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Restricted (2)',
+            child: Text(
+              'Restricted (2)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentFilter = newValue;
+            });
+          }
+        },
+        underline: Container(),
       ),
     );
   }
@@ -66,55 +173,12 @@ class ManagersDesign extends StatelessWidget {
           decoration: InputDecoration(
             hintText: 'Search managers...',
             prefixIcon: Icon(
-              Icons.search_rounded, 
-              color: colorScheme.onBackground.withOpacity(0.6)
+              Icons.search_rounded,
+              color: colorScheme.onBackground.withOpacity(0.6),
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterTabs(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      color: colorScheme.surface,
-      child: Row(
-        children: [
-          _buildFilterTab(context, 'All (24)', true),
-          const SizedBox(width: 12),
-          _buildFilterTab(context, 'Active (22)', false),
-          const SizedBox(width: 12),
-          _buildFilterTab(context, 'Restricted (2)', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTab(BuildContext context, String label, bool active) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? colorScheme.primary.withOpacity(0.06) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: active ? colorScheme.primary.withOpacity(0.2) : colorScheme.outline.withOpacity(0.3),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? colorScheme.primary : colorScheme.onBackground.withOpacity(0.7),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -322,8 +386,8 @@ class _ManagerCard extends StatelessWidget {
 
   Color _getStatusColor(ColorScheme colorScheme) {
     if (isRestricted) {
-      return colorScheme.error; // Use theme error color for restricted status
+      return colorScheme.error;
     }
-    return colorScheme.primary; // Use theme primary color for active status
+    return colorScheme.primary;
   }
 }
