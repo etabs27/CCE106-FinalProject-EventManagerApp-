@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:event_manager_application_finalproject/event_service.dart';
+import 'package:event_manager_application_finalproject/models/event.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
 
 class AllEventsDesign extends StatefulWidget {
   const AllEventsDesign({super.key});
@@ -9,50 +13,60 @@ class AllEventsDesign extends StatefulWidget {
 }
 
 class _AllEventsDesignState extends State<AllEventsDesign> {
-  String _currentFilter = 'All (150)';
+  String _currentFilter = 'All';
   final ScrollController _scrollController = ScrollController();
-  double _scrollOffset = 0.0;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounceTimer;
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    // Add listener to the text controller
+    _searchController.addListener(() {
+      _onSearchChanged();
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
+    _isDisposed = true;
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
 
-  void _onScroll() {
-    setState(() {
-      _scrollOffset = _scrollController.hasClients 
-          ? _scrollController.offset 
-          : 0.0;
+  void _onSearchChanged() {
+    // Cancel any previous timer
+    _searchDebounceTimer?.cancel();
+    
+    // Create a new timer
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!_isDisposed) {
+        setState(() {
+          _searchQuery = _searchController.text.trim().toLowerCase();
+          print('Search query updated: "$_searchQuery"');
+        });
+      }
     });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchDebounceTimer?.cancel(); // Cancel any pending timer
+    if (!_isDisposed) {
+      setState(() {
+        _searchQuery = '';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    // Calculate background color based on scroll position
-    final double scrollThreshold = 50.0;
-    final double maxScroll = 150.0;
-    
-    double opacity = 0.0;
-    if (_scrollOffset > scrollThreshold) {
-      opacity = ((_scrollOffset - scrollThreshold) / maxScroll).clamp(0.0, 1.0);
-    }
-
-    final appBarColor = Color.lerp(
-      Colors.white,
-      theme.scaffoldBackgroundColor,
-      opacity,
-    )!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -64,80 +78,88 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: appBarColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
       ),
-      body: NotificationListener<ScrollUpdateNotification>(
-        onNotification: (notification) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              setState(() {
-                _scrollOffset = _scrollController.offset;
-              });
-            }
-          });
-          return false;
-        },
-        child: Column(
-          children: [
-            // Filter button row placed below AppBar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.3),
+      body: StreamBuilder<List<Event>>(
+        stream: EventService.getAllEvents(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          final events = snapshot.data ?? [];
+          
+          return Column(
+            children: [
+              // Filter button row placed below AppBar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Filter Button
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: colorScheme.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.filter_list_rounded,
+                            color: colorScheme.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            width: 70,
+                            child: _buildFilterDropdown(events),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: colorScheme.primary,
+                            size: 16,
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          color: colorScheme.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 70,
-                          child: _buildFilterDropdown(),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: colorScheme.primary,
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            
-            // Search Bar
-            _buildSearchBar(context),
-            
-            // Events List
-            Expanded(
-              child: _buildEventsList(context),
-            ),
-          ],
-        ),
+              
+              // Search Bar
+              _buildSearchBar(context),
+              
+              // Events List
+              Expanded(
+                child: _buildEventsList(context, events),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildFilterDropdown() {
+  Widget _buildFilterDropdown(List<Event> events) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Apply search filter first, then count
+    final filteredEvents = _filterEvents(events, _searchQuery);
+    final totalCount = filteredEvents.length;
+    final activeCount = filteredEvents.where((event) => event.status == EventStatus.approved && event.date.isAfter(DateTime.now())).length;
+    final pendingCount = filteredEvents.where((event) => event.status == EventStatus.pending).length;
+    final completedCount = filteredEvents.where((event) => event.status == EventStatus.approved && event.date.isBefore(DateTime.now())).length;
+    final cancelledCount = filteredEvents.where((event) => event.status == EventStatus.cancelled).length;
 
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
@@ -156,9 +178,9 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
         borderRadius: BorderRadius.circular(12),
         items: [
           DropdownMenuItem<String>(
-            value: 'All (150)',
+            value: 'All',
             child: Text(
-              'All (150)',
+              'All ($totalCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -167,9 +189,9 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
             ),
           ),
           DropdownMenuItem<String>(
-            value: 'Active (82)',
+            value: 'Active',
             child: Text(
-              'Active (82)',
+              'Active ($activeCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -178,9 +200,9 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
             ),
           ),
           DropdownMenuItem<String>(
-            value: 'Pending (7)',
+            value: 'Pending',
             child: Text(
-              'Pending (7)',
+              'Pending ($pendingCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -191,7 +213,18 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
           DropdownMenuItem<String>(
             value: 'Completed',
             child: Text(
-              'Completed',
+              'Completed ($completedCount)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          DropdownMenuItem<String>(
+            value: 'Cancelled',
+            child: Text(
+              'Cancelled ($cancelledCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -217,7 +250,7 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       color: theme.scaffoldBackgroundColor,
       child: Container(
         decoration: BoxDecoration(
@@ -226,12 +259,22 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
           border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
         ),
         child: TextField(
+          controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'Search events...',
+            hintText: 'Search events by title, manager, category, venue, or description...',
             prefixIcon: Icon(
               Icons.search_rounded, 
               color: colorScheme.onBackground.withOpacity(0.6)
             ),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear_rounded,
+                      color: colorScheme.onBackground.withOpacity(0.6),
+                    ),
+                    onPressed: _clearSearch,
+                  )
+                : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
@@ -240,105 +283,181 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
     );
   }
 
-  Widget _buildEventsList(BuildContext context) {
-    return ListView(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(20),
+  Widget _buildEventsList(BuildContext context, List<Event> events) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    // Apply search filter
+    List<Event> filteredEvents = _filterEvents(events, _searchQuery);
+    
+    // Filter events based on current filter
+    if (_currentFilter == 'Active') {
+      filteredEvents = filteredEvents.where((event) => 
+        event.status == EventStatus.approved && 
+        event.date.isAfter(DateTime.now())
+      ).toList();
+    } else if (_currentFilter == 'Pending') {
+      filteredEvents = filteredEvents.where((event) => event.status == EventStatus.pending).toList();
+    } else if (_currentFilter == 'Completed') {
+      filteredEvents = filteredEvents.where((event) => 
+        event.status == EventStatus.approved && 
+        event.date.isBefore(DateTime.now())
+      ).toList();
+    } else if (_currentFilter == 'Cancelled') {
+      filteredEvents = filteredEvents.where((event) => event.status == EventStatus.cancelled).toList();
+    }
+    
+    if (filteredEvents.isEmpty) {
+      String message;
+      if (_searchQuery.isNotEmpty) {
+        message = _currentFilter != 'All' 
+            ? 'No ${_currentFilter.toLowerCase()} events found for "$_searchQuery"'
+            : 'No events found for "$_searchQuery"';
+      } else {
+        message = 'No ${_currentFilter.toLowerCase()} events';
+      }
+      
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_off,
+              size: 64,
+              color: theme.colorScheme.onBackground.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: theme.colorScheme.onBackground.withOpacity(0.6),
+              ),
+            ),
+            if (_searchQuery.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: TextButton(
+                  onPressed: _clearSearch,
+                  child: Text('Clear search'),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    
+    // Show search results count
+    Widget? header;
+    if (_searchQuery.isNotEmpty) {
+      header = Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: Text(
+          'Found ${filteredEvents.length} ${filteredEvents.length == 1 ? 'event' : 'events'} for "$_searchQuery"',
+          style: TextStyle(
+            color: colorScheme.onBackground.withOpacity(0.6),
+            fontSize: 14,
+          ),
+        ),
+      );
+    }
+    
+    return Column(
       children: [
-        // Active Event
-        _EventCard(
-          status: 'Active',
-          category: 'Music',
-          title: 'Summer Music Festival',
-          date: 'Dec 20, 2024 - 6:00 PM',
-          managerName: 'Sarah Johnson',
-          registeredCount: '1,234',
-          totalCapacity: '2,000',
-          checkedInCount: '856',
-          isPending: false,
-        ),
-        const SizedBox(height: 16),
-        
-        // Pending Event
-        _EventCard(
-          status: 'Pending',
-          category: 'Tech',
-          title: 'Tech Conference 2024',
-          date: 'Dec 25, 2024 - 9:00 AM',
-          managerName: 'Mike Chen',
-          registeredCount: '850',
-          totalCapacity: '1,000',
-          checkedInCount: null,
-          isPending: true,
-        ),
-        // Add more items for scrolling
-        _EventCard(
-          status: 'Active',
-          category: 'Art',
-          title: 'Art Exhibition',
-          date: 'Dec 28, 2024 - 10:00 AM',
-          managerName: 'Lisa Rodriguez',
-          registeredCount: '500',
-          totalCapacity: '800',
-          checkedInCount: '320',
-          isPending: false,
-        ),
-        const SizedBox(height: 16),
-        _EventCard(
-          status: 'Completed',
-          category: 'Food',
-          title: 'Food Festival',
-          date: 'Nov 15, 2024 - 11:00 AM',
-          managerName: 'Alex Chen',
-          registeredCount: '1,200',
-          totalCapacity: '1,500',
-          checkedInCount: '1,150',
-          isPending: false,
-        ),
-        const SizedBox(height: 16),
-        _EventCard(
-          status: 'Pending',
-          category: 'Education',
-          title: 'Tech Workshop',
-          date: 'Jan 10, 2025 - 2:00 PM',
-          managerName: 'David Kim',
-          registeredCount: '150',
-          totalCapacity: '300',
-          checkedInCount: null,
-          isPending: true,
+        if (header != null) header,
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            itemCount: filteredEvents.length,
+            itemBuilder: (context, index) {
+              final event = filteredEvents[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: index < filteredEvents.length - 1 ? 16 : 0),
+                child: _EventCardStream(
+                  event: event,
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
   }
+
+  // Helper method to filter events by search query
+  List<Event> _filterEvents(List<Event> events, String query) {
+    if (query.isEmpty) return events;
+
+    final filtered = events.where((event) {
+      final title = event.title.toLowerCase();
+      final managerEmail = event.managerEmail.toLowerCase();
+      final category = event.category.toLowerCase();
+      final description = event.description?.toLowerCase() ?? '';
+      final venue = event.venue?.toLowerCase() ?? '';
+
+      final matches = title.contains(query) ||
+             managerEmail.contains(query) ||
+             category.contains(query) ||
+             description.contains(query) ||
+             venue.contains(query);
+
+      return matches;
+    }).toList();
+
+    return filtered;
+  }
 }
 
-class _EventCard extends StatelessWidget {
-  final String status;
-  final String category;
-  final String title;
-  final String date;
-  final String managerName;
-  final String registeredCount;
-  final String totalCapacity;
-  final String? checkedInCount;
-  final bool isPending;
+class _EventCardStream extends StatelessWidget {
+  final Event event;
 
-  const _EventCard({
-    required this.status,
-    required this.category,
-    required this.title,
-    required this.date,
-    required this.managerName,
-    required this.registeredCount,
-    required this.totalCapacity,
-    this.checkedInCount,
-    required this.isPending,
+  const _EventCardStream({
+    required this.event,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    
+    // Determine status text and color
+    String statusText;
+    Color statusColor;
+    bool isPending = false;
+    
+    switch (event.status) {
+      case EventStatus.pending:
+        statusText = 'Pending';
+        statusColor = Colors.orange;
+        isPending = true;
+        break;
+      case EventStatus.approved:
+        statusText = event.date.isBefore(DateTime.now()) ? 'Completed' : 'Active';
+        statusColor = event.date.isBefore(DateTime.now()) ? Colors.green : colorScheme.primary;
+        break;
+      case EventStatus.rejected:
+        statusText = 'Rejected';
+        statusColor = Colors.red;
+        break;
+      case EventStatus.cancelled:
+        statusText = 'Cancelled';
+        statusColor = Colors.grey;
+        break;
+      default:
+        statusText = 'Unknown';
+        statusColor = Colors.grey;
+    }
+
+    final dateFormat = DateFormat('MMM dd, yyyy - hh:mm a');
+    final formattedDate = dateFormat.format(DateTime(
+      event.date.year,
+      event.date.month,
+      event.date.day,
+      event.startTime?.hour ?? 0,
+      event.startTime?.minute ?? 0,
+    ));
 
     return Container(
       decoration: BoxDecoration(
@@ -359,7 +478,7 @@ class _EventCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -370,13 +489,13 @@ class _EventCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary,
+                    color: statusColor,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    status,
+                    statusText,
                     style: TextStyle(
-                      color: colorScheme.onPrimary,
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -389,13 +508,13 @@ class _EventCard extends StatelessWidget {
                     color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.2),
+                      color: statusColor.withOpacity(0.2),
                     ),
                   ),
                   child: Text(
-                    category,
+                    event.category,
                     style: TextStyle(
-                      color: colorScheme.primary,
+                      color: statusColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -416,7 +535,7 @@ class _EventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      event.title,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -425,7 +544,7 @@ class _EventCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      date,
+                      formattedDate,
                       style: TextStyle(
                         color: colorScheme.onBackground.withOpacity(0.6),
                         fontSize: 14,
@@ -433,7 +552,7 @@ class _EventCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Manager: $managerName',
+                      'Manager: ${event.managerEmail}',
                       style: TextStyle(
                         color: colorScheme.onBackground.withOpacity(0.6),
                         fontSize: 14,
@@ -455,8 +574,8 @@ class _EventCard extends StatelessWidget {
                     ),
                   ),
                   child: isPending 
-                      ? _buildPendingStats(colorScheme)
-                      : _buildActiveStats(colorScheme),
+                      ? _buildPendingStats(context, event)
+                      : _buildActiveStats(context, event),
                 ),
                 
                 const SizedBox(height: 20),
@@ -466,10 +585,10 @@ class _EventCard extends StatelessWidget {
                   width: double.infinity,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.06),
+                    color: statusColor.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.2),
+                      color: statusColor.withOpacity(0.2),
                     ),
                   ),
                   child: Row(
@@ -477,14 +596,14 @@ class _EventCard extends StatelessWidget {
                     children: [
                       Icon(
                         isPending ? Icons.reviews_rounded : Icons.visibility_rounded,
-                        color: colorScheme.primary,
+                        color: statusColor,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         isPending ? 'Review Event' : 'View Details',
                         style: TextStyle(
-                          color: colorScheme.primary,
+                          color: statusColor,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -500,7 +619,11 @@ class _EventCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveStats(ColorScheme colorScheme) {
+  Widget _buildActiveStats(BuildContext context, Event event) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final registeredCount = event.registeredAttendees ?? 0;
+    final checkedInCount = event.checkedInAttendees ?? 0;
+    
     return Column(
       children: [
         Row(
@@ -527,7 +650,7 @@ class _EventCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '$registeredCount / $totalCapacity',
+              '$registeredCount / ${event.capacity}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -553,37 +676,38 @@ class _EventCard extends StatelessWidget {
             color: colorScheme.outline.withOpacity(0.3),
             borderRadius: BorderRadius.circular(3),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                flex: int.parse(registeredCount.replaceAll(',', '')),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary,
-                    borderRadius: BorderRadius.circular(3),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final percentage = event.capacity > 0 ? registeredCount / event.capacity : 0;
+              final filledWidth = constraints.maxWidth * percentage;
+              return Stack(
+                children: [
+                  Container(
+                    width: filledWidth,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
-                ),
-              ),
-              Expanded(
-                flex: int.parse(totalCapacity.replaceAll(',', '')) - 
-                      int.parse(registeredCount.replaceAll(',', '')),
-                child: const SizedBox(),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPendingStats(ColorScheme colorScheme) {
+  Widget _buildPendingStats(BuildContext context, Event event) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Registered',
+              'Capacity',
               style: TextStyle(
                 color: colorScheme.onBackground.withOpacity(0.6),
                 fontSize: 14,
@@ -603,7 +727,7 @@ class _EventCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '$registeredCount / $totalCapacity',
+              '${event.capacity} max capacity',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -613,14 +737,14 @@ class _EventCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
+                color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
               ),
               child: Text(
                 'Awaiting Approval',
                 style: TextStyle(
-                  color: colorScheme.primary,
+                  color: Colors.orange,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),

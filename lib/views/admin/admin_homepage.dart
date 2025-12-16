@@ -4,9 +4,15 @@ import 'package:event_manager_application_finalproject/theme.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_managers.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_allevents.dart';
 import 'package:event_manager_application_finalproject/views/admin/admin_usermanagement.dart';
-import 'package:event_manager_application_finalproject/views/admin/admin_notificationpage.dart'; // Add this
-import 'package:event_manager_application_finalproject/views/admin/admin_settings.dart'; // Add this
-import 'package:event_manager_application_finalproject/auth/login.dart'; // Import login page
+import 'package:event_manager_application_finalproject/views/admin/admin_notificationpage.dart';
+import 'package:event_manager_application_finalproject/views/admin/admin_settings.dart';
+import 'package:event_manager_application_finalproject/auth/login.dart';
+import 'package:event_manager_application_finalproject/event_service.dart'; // Import EventService
+import 'package:event_manager_application_finalproject/user_service.dart'; // Import UserService
+import 'package:intl/intl.dart';
+
+import '../../models/event.dart';
+import '../../user_service.dart'; // For date formatting
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -42,7 +48,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () {
-                // Navigate to Admin Notification Page
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminNotificationPage()),
@@ -74,13 +79,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Stats Grid
+              // Stats Grid with real data
               _buildStatsGrid(),
               
               // Quick Actions
               _buildQuickActions(),
               
-              // Recent Activity
+              // Recent Activity with real data
               _buildRecentActivity(),
               
               const SizedBox(height: 32),
@@ -99,13 +104,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return PopupMenuButton<String>(
       onSelected: (value) {
         if (value == 'settings') {
-          // Navigate to Admin Settings Page
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AdminSettingsPage()),
           );
         } else if (value == 'signout') {
-          // Handle sign out
           _showSignOutConfirmation();
         }
       },
@@ -202,10 +205,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              // Close the dialog first
               Navigator.pop(dialogContext);
-              
-              // Navigate to login page and remove all routes
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -230,9 +230,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildStatsGrid() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.all(20),
       child: GridView(
@@ -246,25 +243,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          _buildStatCard(
-            'Total Events',
-            '156',
-            Icons.event_available_rounded,
+          // Total Events
+          StreamBuilder<int>(
+            stream: EventService.getTotalEventsCount(),
+            builder: (context, snapshot) {
+              final totalEvents = snapshot.data ?? 0;
+              return _buildStatCard(
+                'Total Events',
+                totalEvents.toString(),
+                Icons.event_available_rounded,
+              );
+            },
           ),
-          _buildStatCard(
-            'Active Managers',
-            '24',
-            Icons.people_alt_rounded,
+          
+          // Active Managers
+          StreamBuilder<int>(
+            stream: UserService.getManagersCount(),
+            builder: (context, snapshot) {
+              final managers = snapshot.data ?? 0;
+              return _buildStatCard(
+                'Active Managers',
+                managers.toString(),
+                Icons.people_alt_rounded,
+              );
+            },
           ),
-          _buildStatCard(
-            'Total Users',
-            '8,542',
-            Icons.person_outline_rounded,
+          
+          // Total Users
+          StreamBuilder<int>(
+            stream: UserService.getTotalUsersCount(),
+            builder: (context, snapshot) {
+              final totalUsers = snapshot.data ?? 0;
+              return _buildStatCard(
+                'Total Users',
+                totalUsers.toString(),
+                Icons.person_outline_rounded,
+              );
+            },
           ),
-          _buildStatCard(
-            'Pending Approvals',
-            '7',
-            Icons.pending_actions_rounded,
+          
+          // Pending Approvals
+          StreamBuilder<int>(
+            stream: EventService.getPendingEventsCount(),
+            builder: (context, snapshot) {
+              final pending = snapshot.data ?? 0;
+              return _buildStatCard(
+                'Pending Approvals',
+                pending.toString(),
+                Icons.pending_actions_rounded,
+              );
+            },
           ),
         ],
       ),
@@ -356,44 +384,72 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildQuickActionCard(
-                  'Event Approvals',
-                  '7 pending',
-                  Icons.pending_actions_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventApprovalsDesign())),
-                ),
+              // Event Approvals with real count
+              StreamBuilder<int>(
+                stream: EventService.getPendingEventsCount(),
+                builder: (context, snapshot) {
+                  final pendingCount = snapshot.data ?? 0;
+                  return Expanded(
+                    child: _buildQuickActionCard(
+                      'Event Approvals',
+                      '$pendingCount pending',
+                      Icons.pending_actions_rounded,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventApprovalsDesign())),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildQuickActionCard(
-                  'Managers',
-                  '24 active',
-                  Icons.people_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagersDesign())),
-                ),
+              // Managers with real count
+              StreamBuilder<int>(
+                stream: UserService.getManagersCount(),
+                builder: (context, snapshot) {
+                  final managersCount = snapshot.data ?? 0;
+                  return Expanded(
+                    child: _buildQuickActionCard(
+                      'Managers',
+                      '$managersCount active',
+                      Icons.people_rounded,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagersDesign())),
+                    ),
+                  );
+                },
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: _buildQuickActionCard(
-                  'All Events',
-                  '156 events',
-                  Icons.event_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsDesign())),
-                ),
+              // All Events with real count
+              StreamBuilder<int>(
+                stream: EventService.getTotalEventsCount(),
+                builder: (context, snapshot) {
+                  final totalEvents = snapshot.data ?? 0;
+                  return Expanded(
+                    child: _buildQuickActionCard(
+                      'All Events',
+                      '$totalEvents events',
+                      Icons.event_rounded,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsDesign())),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildQuickActionCard(
-                  'User Management',
-                  '8,542 users',
-                  Icons.person_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementDesign())),
-                ),
+              // User Management with real count
+              StreamBuilder<int>(
+                stream: UserService.getTotalUsersCount(),
+                builder: (context, snapshot) {
+                  final totalUsers = snapshot.data ?? 0;
+                  return Expanded(
+                    child: _buildQuickActionCard(
+                      'User Management',
+                      '$totalUsers users',
+                      Icons.person_rounded,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementDesign())),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -513,28 +569,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
               const SizedBox(height: 20),
-              _buildActivityItem(
-                'Event "Jazz Night" approved',
-                '2 minutes ago',
-                Icons.check_circle_rounded,
-              ),
-              _buildDivider(),
-              _buildActivityItem(
-                'New manager added: John Smith',
-                '1 hour ago',
-                Icons.person_add_rounded,
-              ),
-              _buildDivider(),
-              _buildActivityItem(
-                'Event "Food Fest" rejected',
-                '3 hours ago',
-                Icons.cancel_rounded,
-              ),
-              _buildDivider(),
-              _buildActivityItem(
-                'New event created: "Tech Conference"',
-                '5 hours ago',
-                Icons.event_available_rounded,
+              // Real recent activity from events
+              StreamBuilder<List<Event>>(
+                stream: EventService.getRecentEvents(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No recent activity',
+                        style: TextStyle(color: colorScheme.onBackground.withOpacity(0.6)),
+                      ),
+                    );
+                  }
+                  
+                  final recentEvents = snapshot.data!;
+                  return Column(
+                    children: [
+                      for (var i = 0; i < recentEvents.length; i++)
+                        Column(
+                          children: [
+                            _buildActivityItem(
+                              _getActivityText(recentEvents[i]),
+                              _formatTimeAgo(recentEvents[i].submittedAt),
+                              _getActivityIcon(recentEvents[i]),
+                            ),
+                            if (i < recentEvents.length - 1) _buildDivider(),
+                          ],
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -600,5 +668,47 @@ class _AdminDashboardState extends State<AdminDashboard> {
       height: 1,
       color: colorScheme.onSurface.withOpacity(0.08),
     );
+  }
+
+  // Helper methods for activity items
+  String _getActivityText(Event event) {
+    switch (event.status) {
+      case EventStatus.approved:
+        return 'Event "${event.title}" approved';
+      case EventStatus.rejected:
+        return 'Event "${event.title}" rejected';
+      case EventStatus.pending:
+        return 'New event created: "${event.title}"';
+      default:
+        return 'Event "${event.title}" updated';
+    }
+  }
+
+  IconData _getActivityIcon(Event event) {
+    switch (event.status) {
+      case EventStatus.approved:
+        return Icons.check_circle_rounded;
+      case EventStatus.rejected:
+        return Icons.cancel_rounded;
+      case EventStatus.pending:
+        return Icons.event_available_rounded;
+      default:
+        return Icons.update_rounded;
+    }
+  }
+
+  String _formatTimeAgo(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
   }
 }

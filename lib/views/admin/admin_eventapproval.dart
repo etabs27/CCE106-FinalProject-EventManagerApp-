@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Add this import
 import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:event_manager_application_finalproject/models/event.dart';
+import 'package:event_manager_application_finalproject/event_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EventApprovalsDesign extends StatefulWidget {
   const EventApprovalsDesign({super.key});
@@ -9,7 +13,7 @@ class EventApprovalsDesign extends StatefulWidget {
 }
 
 class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
-  String _currentFilter = 'All (7)';
+  String _currentFilter = 'All';
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0.0;
 
@@ -17,6 +21,30 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    
+    // Add debugging when widget initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _runDebugChecks();
+    });
+  }
+
+  Future<void> _runDebugChecks() async {
+    print('🛠️ ADMIN DASHBOARD DEBUGGING...');
+    
+    // 1. Check event status values
+    await EventService.checkEventStatusValues();
+    
+    // 2. Test event parsing
+    await EventService.testEventParsing();
+    
+    // 3. Simple test query
+    await EventService.simpleTest();
+    
+    // 4. Get event counts
+    final counts = await EventService.getEventCounts();
+    print('📊 Pending events count: ${counts['pending']}');
+    
+    print('🛠️ DEBUGGING COMPLETE');
   }
 
   @override
@@ -40,8 +68,8 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     final colorScheme = theme.colorScheme;
 
     // Calculate background color based on scroll position
-    final double scrollThreshold = 50.0; // When to start changing color
-    final double maxScroll = 150.0; // When color change is complete
+    final double scrollThreshold = 50.0;
+    final double maxScroll = 150.0;
     
     double opacity = 0.0;
     if (_scrollOffset > scrollThreshold) {
@@ -49,8 +77,8 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     }
 
     final appBarColor = Color.lerp(
-      Colors.white, // Starting color (white)
-      theme.scaffoldBackgroundColor, // Target color (background)
+      Colors.white,
+      theme.scaffoldBackgroundColor,
       opacity,
     )!;
 
@@ -64,13 +92,24 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
             color: colorScheme.onBackground,
           ),
         ),
-        backgroundColor: appBarColor, // Dynamic color based on scroll
+        backgroundColor: appBarColor,
         elevation: 0,
         foregroundColor: colorScheme.onBackground,
+        actions: [
+          // Debug button in app bar
+          IconButton(
+            icon: Icon(Icons.bug_report),
+            onPressed: () async {
+              await _runDebugChecks();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Debug checks completed. Check console.')),
+              );
+            },
+          ),
+        ],
       ),
       body: NotificationListener<ScrollUpdateNotification>(
         onNotification: (notification) {
-          // This ensures the scroll offset is updated for the AppBar color
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_scrollController.hasClients) {
               setState(() {
@@ -80,55 +119,122 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
           });
           return false;
         },
-        child: Column(
-          children: [
-            // Filter button row placed below AppBar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.3),
+        child: StreamBuilder<List<Event>>(
+          stream: EventService.getPendingEvents(),
+          builder: (context, snapshot) {
+            // Debug stream state
+            print('🔄 StreamBuilder state:');
+            print('  - Connection state: ${snapshot.connectionState}');
+            print('  - Has data: ${snapshot.hasData}');
+            print('  - Has error: ${snapshot.hasError}');
+            print('  - Error: ${snapshot.error}');
+            
+            if (snapshot.hasError) {
+              print('❌ ERROR fetching pending events: ${snapshot.error}');
+              return _buildErrorState(context, snapshot.error.toString());
+            }
+            
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingState(context);
+            }
+            
+            final events = snapshot.data ?? [];
+            
+            if (snapshot.hasData) {
+              print('✅ ADMIN: Received ${events.length} pending events');
+              for (var event in events) {
+                print('  - ${event.id}: ${event.title} by ${event.managerEmail}');
+                print('    Date: ${event.date}');
+                print('    Status: ${event.status}');
+                print('    Has startTime: ${event.startTime != null}');
+                print('    Has endTime: ${event.endTime != null}');
+                print('    Has capacity: ${event.capacity != null}');
+              }
+            }
+            
+            return Column(
+              children: [
+                // Filter button row
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: colorScheme.primary.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.filter_list_rounded,
+                              color: colorScheme.primary,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Container(
+                              width: 60,
+                              child: _buildFilterDropdown(events),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.arrow_drop_down_rounded,
+                              color: colorScheme.primary,
+                              size: 16,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          color: colorScheme.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 60,
-                          child: _buildFilterDropdown(),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: colorScheme.primary,
-                          size: 16,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                
+                // Header with stats
+                _buildHeaderStats(context, events),
+                
+                // Events List with ScrollController
+                Expanded(
+                  child: _buildEventsList(context, events),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red),
+            SizedBox(height: 20),
+            Text(
+              'Error Loading Events',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            
-            // Header with stats
-            _buildHeaderStats(context),
-            
-            // Events List with ScrollController
-            Expanded(
-              child: _buildEventsList(context),
+            SizedBox(height: 10),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {}); // Retry
+              },
+              child: Text('Retry'),
             ),
           ],
         ),
@@ -136,9 +242,26 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     );
   }
 
-  Widget _buildFilterDropdown() {
+  Widget _buildLoadingState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 20),
+          Text('Loading pending events...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown(List<Event> events) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    final allCount = events.length;
+    final urgentCount = events.where((event) => event.date.difference(DateTime.now()).inDays <= 3).length;
+    final todayCount = events.where((event) => event.date.day == DateTime.now().day && event.date.month == DateTime.now().month && event.date.year == DateTime.now().year).length;
 
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
@@ -157,9 +280,9 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
         borderRadius: BorderRadius.circular(12),
         items: [
           DropdownMenuItem<String>(
-            value: 'All (7)',
+            value: 'All',
             child: Text(
-              'All (7)',
+              'All ($allCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -168,9 +291,9 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
             ),
           ),
           DropdownMenuItem<String>(
-            value: 'Urgent (2)',
+            value: 'Urgent',
             child: Text(
-              'Urgent (2)',
+              'Urgent ($urgentCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -179,9 +302,9 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
             ),
           ),
           DropdownMenuItem<String>(
-            value: 'Today (5)',
+            value: 'Today',
             child: Text(
-              'Today (5)',
+              'Today ($todayCount)',
               style: TextStyle(
                 color: colorScheme.primary,
                 fontSize: 12,
@@ -202,9 +325,10 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     );
   }
 
-  Widget _buildHeaderStats(BuildContext context) {
+  Widget _buildHeaderStats(BuildContext context, List<Event> events) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final pendingCount = events.length;
 
     return Container(
       width: double.infinity,
@@ -258,7 +382,7 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '7 Pending',
+                      '$pendingCount Pending',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
@@ -282,92 +406,131 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     );
   }
 
-  Widget _buildEventsList(BuildContext context) {
-    return ListView(
-      controller: _scrollController, // Added ScrollController
+  Widget _buildEventsList(BuildContext context, List<Event> events) {
+    // Filter events based on current filter
+    List<Event> filteredEvents = events;
+    if (_currentFilter == 'Urgent') {
+      filteredEvents = events.where((event) => event.date.difference(DateTime.now()).inDays <= 3).toList();
+    } else if (_currentFilter == 'Today') {
+      filteredEvents = events.where((event) => event.date.day == DateTime.now().day && event.date.month == DateTime.now().month && event.date.year == DateTime.now().year).toList();
+    }
+
+    if (filteredEvents.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_busy,
+              size: 64,
+              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No ${_currentFilter.toLowerCase()} events',
+              style: TextStyle(
+                fontSize: 18,
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(20),
-      children: [
-        // Urgent Event
-        _EventCard(
-          title: 'Summer Music Festival',
-          date: 'Dec 20, 2024',
-          time: '6:00 PM',
-          managerName: 'Sarah Johnson',
-          capacity: '2,000 attendees',
-          submittedTime: '2 hours ago',
-          isUrgent: true,
-          daysLeft: 3,
-        ),
-        const SizedBox(height: 16),
-        
-        // Normal Event
-        _EventCard(
-          title: 'Tech Conference 2024',
-          date: 'Dec 25, 2024',
-          time: '9:00 AM',
-          managerName: 'Mike Chen',
-          capacity: '1,000 attendees',
-          submittedTime: '5 hours ago',
-          isUrgent: false,
-          daysLeft: 8,
-        ),
-        // Add more items to make scrolling noticeable
-        _EventCard(
-          title: 'Art Exhibition',
-          date: 'Dec 28, 2024',
-          time: '10:00 AM',
-          managerName: 'Lisa Rodriguez',
-          capacity: '500 attendees',
-          submittedTime: '1 day ago',
-          isUrgent: false,
-          daysLeft: 11,
-        ),
-        const SizedBox(height: 16),
-        _EventCard(
-          title: 'Food Festival',
-          date: 'Jan 5, 2025',
-          time: '11:00 AM',
-          managerName: 'Alex Chen',
-          capacity: '1,500 attendees',
-          submittedTime: '3 days ago',
-          isUrgent: true,
-          daysLeft: 5,
-        ),
-        const SizedBox(height: 16),
-        _EventCard(
-          title: 'Tech Workshop',
-          date: 'Jan 10, 2025',
-          time: '2:00 PM',
-          managerName: 'David Kim',
-          capacity: '300 attendees',
-          submittedTime: '1 week ago',
-          isUrgent: false,
-          daysLeft: 15,
-        ),
-      ],
+      itemCount: filteredEvents.length,
+      itemBuilder: (context, index) {
+        final event = filteredEvents[index];
+        final daysLeft = event.date.difference(DateTime.now()).inDays;
+        final isUrgent = daysLeft <= 3;
+
+        return Column(
+          children: [
+            _EventCard(
+              event: event, 
+              isUrgent: isUrgent, 
+              daysLeft: daysLeft,
+              onApprove: () => _approveEvent(event.id),
+              onReject: () => _rejectEvent(event.id),
+            ),
+            if (index < filteredEvents.length - 1) const SizedBox(height: 16),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _approveEvent(String eventId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      await EventService.approveEvent(eventId, user.email!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Event approved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to approve event: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectEvent(String eventId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      await EventService.rejectEvent(eventId, user.email!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Event rejected'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reject event: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
 class _EventCard extends StatelessWidget {
-  final String title;
-  final String date;
-  final String time;
-  final String managerName;
-  final String capacity;
-  final String submittedTime;
+  final Event event;
   final bool isUrgent;
   final int daysLeft;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
 
   const _EventCard({
-    required this.title,
-    required this.date,
-    required this.time,
-    required this.managerName,
-    required this.capacity,
-    required this.submittedTime,
+    required this.event,
     required this.isUrgent,
     required this.daysLeft,
+    required this.onApprove,
+    required this.onReject,
   });
 
   @override
@@ -406,7 +569,7 @@ class _EventCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            title,
+                            event.title,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -415,7 +578,7 @@ class _EventCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '$date • $time',
+                            '${_formatDate(event.date)}${_hasTimeInfo() ? ' • ${_formatTimeRange()}' : ''}',
                             style: TextStyle(
                               color: colorScheme.onBackground.withOpacity(0.6),
                               fontSize: 14,
@@ -454,68 +617,77 @@ class _EventCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 
                 // Event Details
-                _buildDetailRow(context, 'Event Manager', managerName),
+                _buildDetailRow(context, 'Event Manager', event.managerEmail.split('@')[0]),
                 const SizedBox(height: 12),
-                _buildDetailRow(context, 'Capacity', capacity),
-                const SizedBox(height: 12),
-                _buildDetailRow(context, 'Submitted', submittedTime),
+                
+                // Only show capacity if it exists
+                if (event.capacity != null && event.capacity! > 0)
+                  _buildDetailRow(context, 'Capacity', '${event.capacity} attendees'),
+                if (event.capacity != null && event.capacity! > 0)
+                  const SizedBox(height: 12),
+                
+                _buildDetailRow(context, 'Submitted', _formatSubmittedTime(event.submittedAt)),
                 const SizedBox(height: 20),
                 
-                // Days Left Warning
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.2),
+                // Days Left Warning - only show if date is in future
+                if (daysLeft > 0)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.watch_later_rounded,
+                          color: colorScheme.primary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Event starts in $daysLeft days',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.watch_later_rounded,
-                        color: colorScheme.primary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Event starts in $daysLeft days',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                if (daysLeft > 0) const SizedBox(height: 20),
                 
                 // Action Buttons
                 Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+                      child: ElevatedButton(
+                        onPressed: onApprove,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary.withOpacity(0.06),
+                          foregroundColor: colorScheme.primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
+                          ),
+                          minimumSize: const Size(double.infinity, 48),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.check_circle_rounded,
-                              color: colorScheme.primary,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Approve',
                               style: TextStyle(
-                                color: colorScheme.primary,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -526,26 +698,29 @@ class _EventCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: colorScheme.error.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colorScheme.error.withOpacity(0.2)),
+                      child: ElevatedButton(
+                        onPressed: onReject,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.error.withOpacity(0.06),
+                          foregroundColor: colorScheme.error,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: colorScheme.error.withOpacity(0.2)),
+                          ),
+                          minimumSize: const Size(double.infinity, 48),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.cancel_rounded,
-                              color: colorScheme.error,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Reject',
                               style: TextStyle(
-                                color: colorScheme.error,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -638,5 +813,44 @@ class _EventCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatDate(DateTime date) {
+    // Simple date formatting without intl package
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$day/$month/$year';
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '${hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  String _formatSubmittedTime(DateTime submittedAt) {
+    final now = DateTime.now();
+    final difference = now.difference(submittedAt);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  // Helper methods
+  bool _hasTimeInfo() {
+    return event.startTime != null && event.endTime != null;
+  }
+
+  String _formatTimeRange() {
+    if (!_hasTimeInfo()) return '';
+    return '${_formatTime(event.startTime!)} - ${_formatTime(event.endTime!)}';
   }
 }

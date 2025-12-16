@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
 import 'package:event_manager_application_finalproject/views/manager/manager_homepage.dart';
+import 'package:event_manager_application_finalproject/models/event.dart';
+import 'package:event_manager_application_finalproject/event_service.dart';
 
 class ManagerAddEventPage extends StatefulWidget {
   const ManagerAddEventPage({super.key});
@@ -253,13 +256,62 @@ class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
     });
   }
 
-  void _submitEvent() {
+  void _submitEvent() async {
     if (_validateCurrentStep()) {
-      // Show preview/success dialog
-      showDialog(
-        context: context,
-        builder: (context) => _buildReviewDialog(),
-      );
+      try {
+        // Get current user
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('User not authenticated'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+          return;
+        }
+
+        // TODO: Upload image to Cloudinary and get URL
+        String? imageUrl;
+        if (_hasImage) {
+          // For now, we'll skip image upload and set imageUrl to null
+          // imageUrl = await _uploadToCloudinary();
+        }
+
+        // Create Event object
+        final event = Event(
+          id: '', // Will be set by Firestore
+          title: _eventNameController.text,
+          description: _descriptionController.text,
+          category: _selectedCategory!,
+          date: _selectedDate!,
+          startTime: _startTime!,
+          endTime: _endTime!,
+          venue: _venueController.text,
+          fullAddress: _fullAddressController.text,
+          capacity: int.parse(_capacityController.text),
+          price: _priceController.text.isNotEmpty ? double.parse(_priceController.text) : null,
+          managerEmail: user.email!,
+          imageUrl: imageUrl,
+          submittedAt: DateTime.now(),
+        );
+
+        // Save to Firestore
+        await EventService.submitEvent(event);
+
+        // Show success dialog
+        showDialog(
+          context: context,
+          builder: (context) => _buildReviewDialog(),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit event: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
