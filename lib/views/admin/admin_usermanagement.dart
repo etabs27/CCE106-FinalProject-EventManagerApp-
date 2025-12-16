@@ -319,8 +319,16 @@ class _UserManagementDesignState extends State<UserManagementDesign> {
         if (_searchQuery.isNotEmpty) {
           filteredUsers = filteredUsers.where((user) {
             final name = (user['name'] ?? '').toString().toLowerCase();
+            final firstName = (user['firstName'] ?? '').toString().toLowerCase();
+            final lastName = (user['lastName'] ?? '').toString().toLowerCase();
+            final fullName = (user['fullName'] ?? '').toString().toLowerCase();
             final email = (user['email'] ?? '').toString().toLowerCase();
+            
+            // Search in all name fields and email
             return name.contains(_searchQuery.toLowerCase()) || 
+                   firstName.contains(_searchQuery.toLowerCase()) ||
+                   lastName.contains(_searchQuery.toLowerCase()) ||
+                   fullName.contains(_searchQuery.toLowerCase()) ||
                    email.contains(_searchQuery.toLowerCase());
           }).toList();
         }
@@ -418,81 +426,81 @@ class _UserCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              const SizedBox(height: 16),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'User Actions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onBackground,
+                const SizedBox(height: 16),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurface.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Action Items
-              _buildActionItem(
-                context,
-                icon: Icons.visibility_rounded,
-                title: 'View Profile',
-                subtitle: 'See detailed information',
-                color: colorScheme.primary,
-                onTap: () {
-                  Navigator.pop(context);
-                  _viewUserProfile(context, userEmail);
-                },
-              ),
-              
-              // User specific actions
-              _buildActionItem(
-                context,
-                icon: isSuspended ? Icons.play_circle_outline_rounded : Icons.pause_circle_outline_rounded,
-                title: isSuspended ? 'Activate User' : 'Suspend User',
-                subtitle: isSuspended ? 'Allow user to access the app' : 'Temporarily block user access',
-                color: isSuspended ? Colors.green : Colors.orange,
-                onTap: () {
-                  Navigator.pop(context);
-                  _toggleUserSuspension(context, userId, userEmail, isSuspended);
-                },
-              ),
-              
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
-                      ),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: colorScheme.onBackground.withOpacity(0.7),
-                        fontWeight: FontWeight.w500,
-                      ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'User Actions',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onBackground,
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 24),
+                
+                // Action Items
+                _buildActionItem(
+                  context,
+                  icon: Icons.visibility_rounded,
+                  title: 'View Profile',
+                  subtitle: 'See detailed information',
+                  color: colorScheme.primary,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _viewUserProfile(context, userEmail);
+                  },
+                ),
+                
+                // User specific actions
+                _buildActionItem(
+                  context,
+                  icon: isSuspended ? Icons.play_circle_outline_rounded : Icons.pause_circle_outline_rounded,
+                  title: isSuspended ? 'Activate User' : 'Suspend User',
+                  subtitle: isSuspended ? 'Allow user to access the app' : 'Temporarily block user access',
+                  color: isSuspended ? Colors.green : Colors.orange,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _toggleUserSuspension(context, userId, userEmail, isSuspended);
+                  },
+                ),
+                
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: colorScheme.onBackground.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -602,24 +610,54 @@ class _UserCard extends StatelessWidget {
   }
 
   void _viewUserProfile(BuildContext context, String userEmail) {
-    final role = userData['role'] ?? 'user';
+    final role = userData['role'] as String? ?? 'user';
     final isSuspended = userData['isSuspended'] as bool? ?? false;
+    
+    // Get name details
+    final firstName = userData['firstName'] as String? ?? '';
+    final lastName = userData['lastName'] as String? ?? '';
+    final middleName = userData['middleName'] as String?;
+    
+    // Build display name
+    String displayName = 'No Name';
+    if (firstName.isNotEmpty && lastName.isNotEmpty) {
+      if (middleName != null && middleName.isNotEmpty) {
+        displayName = '$firstName $middleName $lastName';
+      } else {
+        displayName = '$firstName $lastName';
+      }
+    } else {
+      displayName = userData['name'] as String? ?? 'No Name';
+    }
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('User Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Email: $userEmail'),
-            Text('Name: ${userData['name'] ?? 'N/A'}'),
-            Text('Role: ${role.toUpperCase()}'),
-            Text('Status: ${isSuspended ? 'Suspended' : 'Active'}'),
-            if (userData['createdAt'] != null) 
-              Text('Joined: ${DateFormat('MMM dd, yyyy').format(userData['createdAt'].toDate())}'),
-          ],
+        title: Text('User Profile', style: TextStyle(color: Theme.of(context).colorScheme.onBackground)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Full Name: $displayName', style: TextStyle(color: Theme.of(context).colorScheme.onBackground)),
+              const SizedBox(height: 8),
+              if (firstName.isNotEmpty) 
+                Text('First Name: $firstName', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+              if (lastName.isNotEmpty) 
+                Text('Last Name: $lastName', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+              if (middleName != null && middleName.isNotEmpty) 
+                Text('Middle Name: $middleName', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+              const SizedBox(height: 8),
+              Text('Email: $userEmail', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+              Text('Role: ${role.toUpperCase()}', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+              Text('Status: ${isSuspended ? 'Suspended' : 'Active'}', style: TextStyle(
+                color: isSuspended ? Theme.of(context).colorScheme.error : Colors.green,
+              )),
+              if (userData['createdAt'] != null) 
+                Text('Joined: ${DateFormat('MMM dd, yyyy').format(userData['createdAt'].toDate())}', 
+                     style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8))),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -642,6 +680,26 @@ class _UserCard extends StatelessWidget {
     final lastActive = userData['lastActive'];
     final userRole = userData['role'] as String? ?? 'user';
     final isSuspended = userData['isSuspended'] as bool? ?? false;
+    
+    // Get name details
+    final firstName = userData['firstName'] as String? ?? '';
+    final lastName = userData['lastName'] as String? ?? '';
+    final middleName = userData['middleName'] as String?;
+    
+    // Build display name
+    String displayName = 'No Name';
+    if (firstName.isNotEmpty && lastName.isNotEmpty) {
+      if (middleName != null && middleName.isNotEmpty) {
+        displayName = '$firstName $middleName $lastName';
+      } else {
+        displayName = '$firstName $lastName';
+      }
+    } else {
+      // Fallback to legacy 'name' field or 'fullName'
+      displayName = userData['name'] as String? ?? 
+                   userData['fullName'] as String? ?? 
+                   'No Name';
+    }
     
     // Format dates
     String joinDate = 'Unknown';
@@ -718,7 +776,7 @@ class _UserCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          userData['name'] ?? 'No Name',
+                          displayName,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
