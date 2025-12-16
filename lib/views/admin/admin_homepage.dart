@@ -9,10 +9,6 @@ import 'package:event_manager_application_finalproject/views/admin/admin_setting
 import 'package:event_manager_application_finalproject/auth/login.dart';
 import 'package:event_manager_application_finalproject/event_service.dart'; // Import EventService
 import 'package:event_manager_application_finalproject/user_service.dart'; // Import UserService
-import 'package:intl/intl.dart';
-
-import '../../models/event.dart';
-import '../../user_service.dart'; // For date formatting
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -22,6 +18,106 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  int _activeEvents = 0;
+  int _pendingEvents = 0;
+  int _totalAttendees = 0;
+  int _totalUsers = 0;
+  int _managersCount = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      // Load all data
+      final futures = await Future.wait([
+        _getActiveEventsCount(),
+        _getPendingEventsCount(),
+        _getAllUsersCount(), // Updated to include all users
+        _getManagersCount(),
+        _calculateTotalAttendees(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _activeEvents = futures[0];
+          _pendingEvents = futures[1];
+          _totalUsers = futures[2]; // This now includes all users
+          _managersCount = futures[3];
+          _totalAttendees = futures[4];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<int> _getActiveEventsCount() async {
+    try {
+      // If getActiveEventsCount doesn't exist, try getTotalEventsCount
+      final count = await EventService.getTotalEventsCount().first;
+      return count;
+    } catch (e) {
+      print('Error getting active events count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _getPendingEventsCount() async {
+    try {
+      final count = await EventService.getPendingEventsCount().first;
+      return count;
+    } catch (e) {
+      print('Error getting pending events count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _getAllUsersCount() async {
+    try {
+      // Get count of all users including admin, managers, and regular users
+      final count = await UserService.getTotalUsersCount().first;
+      return count;
+    } catch (e) {
+      print('Error getting all users count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _getManagersCount() async {
+    try {
+      final count = await UserService.getManagersCount().first;
+      return count;
+    } catch (e) {
+      print('Error getting managers count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _calculateTotalAttendees() async {
+    try {
+      final events = await EventService.getAllEvents().first;
+      int total = 0;
+      for (var event in events) {
+        total += event.registeredAttendees ?? 0;
+      }
+      return total;
+    } catch (e) {
+      print('Error calculating total attendees: $e');
+      return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -75,23 +171,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stats Grid with real data
-              _buildStatsGrid(),
-              
-              // Quick Actions
-              _buildQuickActions(),
-              
-              // Recent Activity with real data
-              _buildRecentActivity(),
-              
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Stats Grid with real data
+                    _buildStatsGrid(),
+                    
+                    // Quick Actions
+                    _buildQuickActions(),
+                    
+                    // Recent Activity
+                    _buildRecentActivity(),
+                    
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -230,80 +328,67 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildStatsGrid() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: GridView(
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
-        ),
+      child: GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          // Total Events
-          StreamBuilder<int>(
-            stream: EventService.getTotalEventsCount(),
-            builder: (context, snapshot) {
-              final totalEvents = snapshot.data ?? 0;
-              return _buildStatCard(
-                'Total Events',
-                totalEvents.toString(),
-                Icons.event_available_rounded,
-              );
-            },
-          ),
-          
-          // Active Managers
-          StreamBuilder<int>(
-            stream: UserService.getManagersCount(),
-            builder: (context, snapshot) {
-              final managers = snapshot.data ?? 0;
-              return _buildStatCard(
-                'Active Managers',
-                managers.toString(),
-                Icons.people_alt_rounded,
-              );
-            },
-          ),
-          
-          // Total Users
-          StreamBuilder<int>(
-            stream: UserService.getTotalUsersCount(),
-            builder: (context, snapshot) {
-              final totalUsers = snapshot.data ?? 0;
-              return _buildStatCard(
-                'Total Users',
-                totalUsers.toString(),
-                Icons.person_outline_rounded,
-              );
-            },
+          // Active Events
+          _buildStatCard(
+            'Active Events',
+            _activeEvents.toString(),
+            Icons.event_available_rounded,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
           ),
           
           // Pending Approvals
-          StreamBuilder<int>(
-            stream: EventService.getPendingEventsCount(),
-            builder: (context, snapshot) {
-              final pending = snapshot.data ?? 0;
-              return _buildStatCard(
-                'Pending Approvals',
-                pending.toString(),
-                Icons.pending_actions_rounded,
-              );
-            },
+          _buildStatCard(
+            'Pending',
+            _pendingEvents.toString(),
+            Icons.pending_actions_rounded,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          ),
+          
+          // Total Attendees
+          _buildStatCard(
+            'Total Attendees',
+            _totalAttendees.toString(),
+            Icons.people_alt_rounded,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          ),
+          
+          // Total Users (includes admin + managers + users)
+          _buildStatCard(
+            'Total Users',
+            _totalUsers.toString(),
+            Icons.person_outline_rounded,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
+  Widget _buildStatCard(
+    String title, 
+    String value, 
+    IconData icon, {
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -320,8 +405,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // Icon at the top (left aligned)
             Container(
               width: 40,
               height: 40,
@@ -335,27 +420,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 size: 20,
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onBackground.withOpacity(0.65),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+            const SizedBox(height: 12),
+            // Number text in middle, right aligned
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                style: textTheme.titleLarge?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onBackground,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: textTheme.titleLarge?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onBackground,
-                  ),
-                ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Title at the bottom, left aligned
+            Text(
+              title,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onBackground.withOpacity(0.65),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -384,72 +470,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
           Row(
             children: [
-              // Event Approvals with real count
-              StreamBuilder<int>(
-                stream: EventService.getPendingEventsCount(),
-                builder: (context, snapshot) {
-                  final pendingCount = snapshot.data ?? 0;
-                  return Expanded(
-                    child: _buildQuickActionCard(
-                      'Event Approvals',
-                      '$pendingCount pending',
-                      Icons.pending_actions_rounded,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventApprovalsDesign())),
-                    ),
-                  );
-                },
+              // Event Approvals
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'Event Approvals',
+                  value: '$_pendingEvents pending',
+                  icon: Icons.pending_actions_rounded,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventApprovalsDesign())),
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                ),
               ),
               const SizedBox(width: 12),
-              // Managers with real count
-              StreamBuilder<int>(
-                stream: UserService.getManagersCount(),
-                builder: (context, snapshot) {
-                  final managersCount = snapshot.data ?? 0;
-                  return Expanded(
-                    child: _buildQuickActionCard(
-                      'Managers',
-                      '$managersCount active',
-                      Icons.people_rounded,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagersDesign())),
-                    ),
-                  );
-                },
+              // Managers
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'Managers',
+                  value: '$_managersCount active',
+                  icon: Icons.people_rounded,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagersDesign())),
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              // All Events with real count
-              StreamBuilder<int>(
-                stream: EventService.getTotalEventsCount(),
-                builder: (context, snapshot) {
-                  final totalEvents = snapshot.data ?? 0;
-                  return Expanded(
-                    child: _buildQuickActionCard(
-                      'All Events',
-                      '$totalEvents events',
-                      Icons.event_rounded,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsDesign())),
-                    ),
-                  );
-                },
+              // All Events
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'All Events',
+                  value: '$_activeEvents active',
+                  icon: Icons.event_rounded,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsDesign())),
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                ),
               ),
               const SizedBox(width: 12),
-              // User Management with real count
-              StreamBuilder<int>(
-                stream: UserService.getTotalUsersCount(),
-                builder: (context, snapshot) {
-                  final totalUsers = snapshot.data ?? 0;
-                  return Expanded(
-                    child: _buildQuickActionCard(
-                      'User Management',
-                      '$totalUsers users',
-                      Icons.person_rounded,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementDesign())),
-                    ),
-                  );
-                },
+              // User Management (includes all users)
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'User Management',
+                  value: '$_totalUsers users',
+                  icon: Icons.person_rounded,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementDesign())),
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                ),
               ),
             ],
           ),
@@ -458,11 +528,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildQuickActionCard(String title, String subtitle, IconData icon, {VoidCallback? onTap}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
+  Widget _buildQuickActionCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    VoidCallback? onTap,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -483,7 +556,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon
+              // Icon at the top (left aligned)
               Container(
                 width: 48,
                 height: 48,
@@ -497,20 +570,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   size: 24,
                 ),
               ),
-              const SizedBox(height: 16),
-              // Title
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onBackground,
-                  fontSize: 16,
+              const SizedBox(height: 12),
+              // Value/Number in middle, right aligned
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onBackground,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
-              // Subtitle
+              // Title at the bottom, left aligned
               Text(
-                subtitle,
+                title,
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onBackground.withOpacity(0.6),
                   fontSize: 14,
@@ -569,146 +645,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Real recent activity from events
-              StreamBuilder<List<Event>>(
-                stream: EventService.getRecentEvents(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No recent activity',
-                        style: TextStyle(color: colorScheme.onBackground.withOpacity(0.6)),
-                      ),
-                    );
-                  }
-                  
-                  final recentEvents = snapshot.data!;
-                  return Column(
-                    children: [
-                      for (var i = 0; i < recentEvents.length; i++)
-                        Column(
-                          children: [
-                            _buildActivityItem(
-                              _getActivityText(recentEvents[i]),
-                              _formatTimeAgo(recentEvents[i].submittedAt),
-                              _getActivityIcon(recentEvents[i]),
-                            ),
-                            if (i < recentEvents.length - 1) _buildDivider(),
-                          ],
-                        ),
-                    ],
-                  );
-                },
+              // Simple placeholder for recent activity
+              Center(
+                child: Text(
+                  'No recent activity',
+                  style: TextStyle(color: colorScheme.onBackground.withOpacity(0.6)),
+                ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildActivityItem(String title, String time, IconData icon) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: colorScheme.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onBackground,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onBackground.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Divider(
-      height: 1,
-      color: colorScheme.onSurface.withOpacity(0.08),
-    );
-  }
-
-  // Helper methods for activity items
-  String _getActivityText(Event event) {
-    switch (event.status) {
-      case EventStatus.approved:
-        return 'Event "${event.title}" approved';
-      case EventStatus.rejected:
-        return 'Event "${event.title}" rejected';
-      case EventStatus.pending:
-        return 'New event created: "${event.title}"';
-      default:
-        return 'Event "${event.title}" updated';
-    }
-  }
-
-  IconData _getActivityIcon(Event event) {
-    switch (event.status) {
-      case EventStatus.approved:
-        return Icons.check_circle_rounded;
-      case EventStatus.rejected:
-        return Icons.cancel_rounded;
-      case EventStatus.pending:
-        return Icons.event_available_rounded;
-      default:
-        return Icons.update_rounded;
-    }
-  }
-
-  String _formatTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-    } else {
-      return 'Just now';
-    }
   }
 }

@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true; // State variable for password visibility
   bool _isSigningIn = false;
+  bool _isSigningInWithGoogle = false;
 
   @override
   void dispose() {
@@ -90,14 +91,14 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signInWithGoogle() async {
-    if (_isSigningIn) return;
-    setState(() => _isSigningIn = true);
+    if (_isSigningInWithGoogle) return;
+    setState(() => _isSigningInWithGoogle = true);
     try {
       await AuthService.signInWithGoogle();
       final current = FirebaseAuth.instance.currentUser;
       if (current == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in failed or was cancelled.')));
-        setState(() => _isSigningIn = false);
+        setState(() => _isSigningInWithGoogle = false);
         return;
       }
 
@@ -129,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
       print('LoginPage._signInWithGoogle error: $e');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in failed.')));
     } finally {
-      setState(() => _isSigningIn = false);
+      setState(() => _isSigningInWithGoogle = false);
     }
   }
 
@@ -168,24 +169,15 @@ class _LoginPageState extends State<LoginPage> {
                 
                 const SizedBox(height: 40),
                 
-                // Welcome Back Text
-                Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Subtitle
-                Text(
-                  "Let's get started by filling out the form below.",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                // Log In Text (Centered)
+                Center(
+                  child: Text(
+                    'Log In',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 
@@ -284,12 +276,12 @@ class _LoginPageState extends State<LoginPage> {
                 
                 const SizedBox(height: 32),
                 
-                // Sign In Button
+                // Sign In Button with loading indicator
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _signIn,
+                    onPressed: _isSigningIn ? null : _signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -298,13 +290,22 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       elevation: 2,
                     ),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isSigningIn
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 
@@ -345,7 +346,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 56,
                   child: OutlinedButton(
-                    onPressed: _isSigningIn ? null : _signInWithGoogle,
+                    onPressed: _isSigningInWithGoogle ? null : _signInWithGoogle,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                       side: BorderSide(
@@ -356,7 +357,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: _isSigningIn
+                    child: _isSigningInWithGoogle
                         ? const SizedBox(
                             height: 20,
                             width: 20,
