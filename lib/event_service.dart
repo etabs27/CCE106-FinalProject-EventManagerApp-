@@ -925,4 +925,13 @@ static Future<List<String>> getAllEventCategories() async {
     return [];
   }
 }
+
+static Future<void> registerUserForEvent(String eventId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception('User not authenticated');
+  
+  await FirebaseFirestore.instance.collection('events').doc(eventId).update({
+    'registeredAttendees': FieldValue.increment(1),
+  });
+}
 }

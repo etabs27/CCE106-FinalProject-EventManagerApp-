@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:event_manager_application_finalproject/views/manager/manager_homepage.dart';
 import 'package:event_manager_application_finalproject/models/event.dart';
 import 'package:event_manager_application_finalproject/event_service.dart';
@@ -17,7 +18,6 @@ class ManagerAddEventPage extends StatefulWidget {
 }
 
 class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _eventNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _venueController = TextEditingController();
@@ -33,8 +33,7 @@ class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
   // For mobile platforms
   File? _bannerImage;
   
-  // For web platforms and Cloudinary
-  String? _imageUrl; // For Cloudinary URL after upload
+  // For web platforms
   Uint8List? _webImageBytes; // For web platform image bytes
 
   final List<String> _categories = [
@@ -217,7 +216,7 @@ class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
     if (_currentStep == 0) {
       return _eventNameController.text.isNotEmpty && 
              _selectedCategory != null && 
-             _descriptionController.text.length >= 20 &&
+             _descriptionController.text.length >= 10 &&
              _hasImage;
     } else if (_currentStep == 1) {
       return _selectedDate != null && 
@@ -256,6 +255,65 @@ class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
     });
   }
 
+  Future<String?> _uploadImageToCloudinary() async {
+    try {
+      // Check if we have an image
+      if (!_hasImage) return null;
+
+      print('Starting image upload to Cloudinary...');
+      
+      final cloudinary = CloudinaryPublic('dt9uv6zv4', 'event_manager_preset', cache: false);
+      CloudinaryResponse response;
+
+      if (kIsWeb) {
+        // For web, upload using bytes
+        if (_webImageBytes != null) {
+          print('Uploading web image (${_webImageBytes!.length} bytes) to Cloudinary...');
+          response = await cloudinary.uploadFile(
+            CloudinaryFile.fromBytesData(
+              _webImageBytes!,
+              identifier: 'event_banner_${DateTime.now().millisecondsSinceEpoch}',
+              folder: 'event_manager/banners',
+            ),
+          );
+          print('✓ Image uploaded successfully: ${response.secureUrl}');
+          return response.secureUrl;
+        } else {
+          print('✗ No web image bytes available');
+          return null;
+        }
+      } else {
+        // For mobile, upload using file path
+        if (_bannerImage != null) {
+          print('Uploading mobile image from ${_bannerImage!.path} to Cloudinary...');
+          response = await cloudinary.uploadFile(
+            CloudinaryFile.fromFile(
+              _bannerImage!.path,
+              identifier: 'event_banner_${DateTime.now().millisecondsSinceEpoch}',
+              folder: 'event_manager/banners',
+            ),
+          );
+          print('✓ Image uploaded successfully: ${response.secureUrl}');
+          return response.secureUrl;
+        } else {
+          print('✗ No mobile image file available');
+          return null;
+        }
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   void _submitEvent() async {
     if (_validateCurrentStep()) {
       try {
@@ -271,11 +329,32 @@ class _ManagerAddEventPageState extends State<ManagerAddEventPage> {
           return;
         }
 
-        // TODO: Upload image to Cloudinary and get URL
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 16),
+                const Text('Uploading event...'),
+              ],
+            ),
+          ),
+        );
+
+        // Upload image if present
         String? imageUrl;
         if (_hasImage) {
-          // For now, we'll skip image upload and set imageUrl to null
-          // imageUrl = await _uploadToCloudinary();
+          imageUrl = await _uploadImageToCloudinary();
+        }
+
+        // Close loading dialog
+        if (mounted) {
+          Navigator.pop(context);
         }
 
         // Create Event object

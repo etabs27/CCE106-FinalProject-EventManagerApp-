@@ -1,0 +1,41 @@
+// Cloudinary Setup Guide - REQUIRED FOR IMAGE UPLOADS
+//
+// 1. CREATE CLOUDINARY ACCOUNT
+//    - Go to https://cloudinary.com
+//    - Click "Sign Up" and create a free account
+//    - Verify your email
+//
+// 2. GET YOUR CLOUD NAME
+//    - After logging in, go to your Dashboard
+//    - Copy the "Cloud name" from the top (looks like: abc123def)
+//
+// 3. CREATE UPLOAD PRESET
+//    - In the left sidebar, click "Settings"
+//    - Click "Upload" tab
+//    - Click "Add upload preset"
+//    - Name: event_manager_preset
+//    - Mode: Unsigned (IMPORTANT - allows client-side uploads)
+//    - Folder: event_manager/banners (optional)
+//    - Allowed formats: jpg, png, jpeg, gif, webp
+//    - Max file size: 10000000 (10MB)
+//    - Click "Save"
+//
+// 4. UPDATE THE CODE
+//    In manager_addevent.dart, replace line ~265:
+//    final cloudinary = CloudinaryPublic('YOUR_CLOUD_NAME', 'YOUR_UPLOAD_PRESET', cache: false);
+//
+//    Example:
+//    final cloudinary = CloudinaryPublic('mycloud123', 'event_manager_preset', cache: false);
+//
+// 5. TEST THE UPLOAD
+//    - Run the app
+//    - Create a new event as manager
+//    - Select an image
+//    - Submit the event
+//    - Check manager dashboard - image should appear
+//
+// TROUBLESHOOTING:
+// - 401 Unauthorized: Check cloud name and upload preset name
+// - Upload preset must be "Unsigned" mode
+// - Make sure upload preset is saved and active
+// - Check browser console for detailed error messages

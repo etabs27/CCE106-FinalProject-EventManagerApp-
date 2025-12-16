@@ -7,6 +7,7 @@ import 'package:event_manager_application_finalproject/views/user/user_favoritep
 import 'package:event_manager_application_finalproject/views/user/user_ticketpage.dart';
 import 'package:event_manager_application_finalproject/views/user/user_profilepage.dart';
 import 'package:event_manager_application_finalproject/views/user/user_homepagenotification.dart';
+import 'package:event_manager_application_finalproject/views/user/user_eventdetailspage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'dart:async'; 
@@ -332,7 +333,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
           final events = snapshot.data ?? [];
           print('Fetched approved events count: ${events.length}');  // Updated message
           for (var event in events) {
-            print('Approved Event: ${event.title}, Date: ${event.date}');  // Removed status check
+            print('Approved Event: ${event.title}, Date: ${event.date}, ImageUrl: "${event.imageUrl}"');  // Updated message
           }
           final filteredEvents = _filterEvents(events);
           print('Filtered upcoming events count: ${filteredEvents.length}');  // Updated message
@@ -350,7 +351,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                         child: TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
-                            hintText: 'Search events by title, description, category, venue...',
+                            hintText: 'Search...',
                             hintStyle: textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurface.withOpacity(0.65),
                             ),
@@ -860,6 +861,8 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
         ? 'Today • ${_formatTime(event.startTime)}' 
         : '${event.date.month}/${event.date.day} • ${_formatTime(event.startTime)}';
 
+    print('Building event card: ${event.title}, ImageUrl: "${event.imageUrl}"');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -873,122 +876,190 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        children: [
+          // Event Image Banner
+          if (event.imageUrl != null && event.imageUrl!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                color: colorScheme.primary.withOpacity(0.1),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: Image.network(
+                  event.imageUrl!,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading image for ${event.title}: $error');
+                    return Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 32,
+                        color: colorScheme.primary.withOpacity(0.5),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: colorScheme.primary,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          // Event Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    event.category,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    'Active',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.green,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              event.title,
-              style: textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              dateFormat,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.6),
-                fontSize: 13,
-              ),
-            ),
-            if (event.venue != null && event.venue!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                event.venue!,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.6),
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      'Available',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.5),
-                        fontSize: 11,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        event.category,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
-                    Text(
-                      '${(event.capacity - (event.registeredAttendees ?? 0)).toString()} seats',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        'Active',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary,
-                    borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 12),
+                Text(
+                  event.title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
                   ),
-                  child: Text(
-                    'View Details',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dateFormat,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 13,
+                  ),
+                ),
+                ...(event.venue != null && event.venue!.isNotEmpty ? [
+                  const SizedBox(height: 4),
+                  Text(
+                    event.venue!,
                     style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.surface,
-                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface.withOpacity(0.6),
                       fontSize: 13,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ] : []),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Available',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withOpacity(0.5),
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          '${(event.capacity - (event.registeredAttendees ?? 0)).toString()} seats',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EventDetailsPage(event: event),
+                          ),
+                        ).then((result) {
+                          // Refresh events if booking was successful
+                          if (result == true) {
+                            setState(() {
+                              _fetchMetricsData();
+                            });
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'View Details',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.surface,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

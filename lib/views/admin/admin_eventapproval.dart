@@ -29,7 +29,7 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
   }
 
   Future<void> _runDebugChecks() async {
-    print('🛠️ ADMIN DASHBOARD DEBUGGING...');
+    print('ADMIN DASHBOARD DEBUGGING...');
     
     // 1. Check event status values
     await EventService.checkEventStatusValues();
@@ -42,9 +42,9 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
     
     // 4. Get event counts
     final counts = await EventService.getEventCounts();
-    print('📊 Pending events count: ${counts['pending']}');
+    print('Pending events count: ${counts['pending']}');
     
-    print('🛠️ DEBUGGING COMPLETE');
+    print('DEBUGGING COMPLETE');
   }
 
   @override
@@ -123,14 +123,14 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
           stream: EventService.getPendingEvents(),
           builder: (context, snapshot) {
             // Debug stream state
-            print('🔄 StreamBuilder state:');
+            print('StreamBuilder state:');
             print('  - Connection state: ${snapshot.connectionState}');
             print('  - Has data: ${snapshot.hasData}');
             print('  - Has error: ${snapshot.hasError}');
             print('  - Error: ${snapshot.error}');
             
             if (snapshot.hasError) {
-              print('❌ ERROR fetching pending events: ${snapshot.error}');
+              print('ERROR fetching pending events: ${snapshot.error}');
               return _buildErrorState(context, snapshot.error.toString());
             }
             
@@ -141,7 +141,7 @@ class _EventApprovalsDesignState extends State<EventApprovalsDesign> {
             final events = snapshot.data ?? [];
             
             if (snapshot.hasData) {
-              print('✅ ADMIN: Received ${events.length} pending events');
+              print('ADMIN: Received ${events.length} pending events');
               for (var event in events) {
                 print('  - ${event.id}: ${event.title} by ${event.managerEmail}');
                 print('    Date: ${event.date}');
@@ -552,6 +552,51 @@ class _EventCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Event Image Banner
+          if (event.imageUrl != null && event.imageUrl!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              height: 160,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                color: colorScheme.primary.withOpacity(0.1),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                child: Image.network(
+                  event.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 48,
+                        color: colorScheme.primary.withOpacity(0.5),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: colorScheme.primary,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
           // Header with urgent badge
           if (isUrgent) _buildUrgentHeader(context),
           

@@ -9,6 +9,9 @@ import 'package:event_manager_application_finalproject/views/admin/admin_setting
 import 'package:event_manager_application_finalproject/auth/login.dart';
 import 'package:event_manager_application_finalproject/event_service.dart'; // Import EventService
 import 'package:event_manager_application_finalproject/user_service.dart'; // Import UserService
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:event_manager_application_finalproject/models/event.dart';
+import 'package:event_manager_application_finalproject/views/user/user_eventdetailspage.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -628,7 +631,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Recent Activity',
+                    'Active Events to Book',
                     style: textTheme.titleLarge?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -645,12 +648,58 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Simple placeholder for recent activity
-              Center(
-                child: Text(
-                  'No recent activity',
-                  style: TextStyle(color: colorScheme.onBackground.withOpacity(0.6)),
-                ),
+              // StreamBuilder to display active events with booking functionality
+              StreamBuilder<List<Event>>(
+                stream: FirebaseFirestore.instance
+                    .collection('events')
+                    .where('status', isEqualTo: 1)  // Approved events only
+                    .snapshots()
+                    .map((snapshot) => snapshot.docs.map((doc) => Event.fromDocument(doc)).toList()),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading events',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.error,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final events = snapshot.data ?? [];
+                  
+                  // Filter to show only upcoming events
+                  final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+                  final upcomingEvents = events
+                      .where((event) => event.date.isAfter(today) || event.date.isAtSameMomentAs(today))
+                      .toList();
+
+                  if (upcomingEvents.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No active events available',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onBackground.withOpacity(0.6),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: upcomingEvents.take(5).map((event) {
+                      return _buildEventCardWithBooking(
+                        event,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    }).toList(),
+                  );
+                },
               ),
               const SizedBox(height: 20),
             ],
@@ -659,4 +708,192 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
+
+  // Add this method to _AdminDashboardState to build an event card with booking functionality
+  Widget _buildEventCardWithBooking(Event event, {required ColorScheme colorScheme, required TextTheme textTheme}) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EventDetailsPage(event: event),
+          ),
+        ).then((result) {
+          // Reload dashboard data if booking was successful
+          if (result == true) {
+            _loadDashboardData();
+          }
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Event Title and Category
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onBackground,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            event.category,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.event_rounded,
+                    color: colorScheme.primary.withOpacity(0.6),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Event Details
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 16, color: colorScheme.onBackground.withOpacity(0.6)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${event.date.toString().split(' ')[0]}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onBackground.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.location_on_rounded, size: 16, color: colorScheme.onBackground.withOpacity(0.6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      event.venue,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onBackground.withOpacity(0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Capacity and Price
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Capacity',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onBackground.withOpacity(0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        '${event.registeredAttendees ?? 0}/${event.capacity}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onBackground,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (event.price != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Price',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onBackground.withOpacity(0.6),
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          '₱${event.price}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              
+              // View Details Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EventDetailsPage(event: event),
+                      ),
+                    ).then((result) {
+                      if (result == true) {
+                        _loadDashboardData();
+                      }
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    disabledBackgroundColor: colorScheme.onBackground.withOpacity(0.2),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'View Details',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 }

@@ -629,107 +629,106 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
   }
 
   Widget _buildStatsSection(List<Event> events) {
-  final uniqueEvents = <String, Event>{};
-  for (var event in events) {
-    uniqueEvents[event.id] = event;
-  }
-  final deduplicatedEvents = uniqueEvents.values.toList();
-  
-  final activeEvents = deduplicatedEvents.where((e) => e.status == EventStatus.approved && e.date.isAfter(DateTime.now())).length;
-  final pendingEvents = deduplicatedEvents.where((e) => e.status == EventStatus.pending).length;
-  final totalAttendees = deduplicatedEvents.fold<int>(0, (sum, event) => sum + (event.checkedInAttendees ?? 0));
+    final uniqueEvents = <String, Event>{};
+    for (var event in events) {
+      uniqueEvents[event.id] = event;
+    }
+    final deduplicatedEvents = uniqueEvents.values.toList();
+    
+    final activeEvents = deduplicatedEvents.where((e) => e.status == EventStatus.approved && e.date.isAfter(DateTime.now())).length;
+    final pendingEvents = deduplicatedEvents.where((e) => e.status == EventStatus.pending).length;
+    final totalAttendees = deduplicatedEvents.fold<int>(0, (sum, event) => sum + (event.checkedInAttendees ?? 0));
 
-  return Padding(
-    padding: const EdgeInsets.all(20),
-    child: Row(
-      children: [
-        Expanded(
-          child: _buildStatCard('Active Events', activeEvents.toString(), Icons.event_available),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard('Pending', pendingEvents.toString(), Icons.pending_actions),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard('Total Attendees', totalAttendees.toString(), Icons.people_alt),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildStatCard(String title, String value, IconData icon) {
-  final theme = Theme.of(context);
-  final colorScheme = theme.colorScheme;
-  final textTheme = theme.textTheme;
-
-  return Container(
-    decoration: BoxDecoration(
-      color: colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: colorScheme.onSurface.withOpacity(0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // Left align column
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
         children: [
-          // Icon on TOP (left aligned)
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: colorScheme.primary,
-              size: 20,
-            ),
+          Expanded(
+            child: _buildStatCard('Active Events', activeEvents.toString(), Icons.event_available),
           ),
-          const SizedBox(height: 8),
-          
-          // Number/text below the icon (right-aligned)
-          Align(
-            alignment: Alignment.centerRight, // Right align
-            child: Text(
-              value,
-              style: textTheme.titleLarge?.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onBackground,
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('Pending', pendingEvents.toString(), Icons.pending_actions),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('Total Attendees', totalAttendees.toString(), Icons.people_alt),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.onSurface.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, // Left align column
+          children: [
+            // Icon on TOP (left aligned)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: colorScheme.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 8),
+            
+            // Number/text below the icon (right-aligned)
+            Align(
+              alignment: Alignment.centerRight, // Right align
+              child: Text(
+                value,
+                style: textTheme.titleLarge?.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onBackground,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 2),
+            
+            // Label below the number (left-aligned)
+            Text(
+              title,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onBackground.withOpacity(0.65),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 2),
-          
-          // Label below the number (left-aligned)
-          Text(
-            title,
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onBackground.withOpacity(0.65),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildMyEventsSection(List<Event> events) {
     final theme = Theme.of(context);
@@ -961,174 +960,323 @@ Widget _buildStatCard(String title, String value, IconData icon) {
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusBgColor, 
-                      borderRadius: BorderRadius.circular(20)
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${event.date.month}/${event.date.day}/${event.date.year} • ${event.startTime.format(context)}', 
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onBackground.withOpacity(0.65), 
-                      fontSize: 12
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                event.title, 
-                style: textTheme.titleLarge?.copyWith(
-                  fontSize: 18, 
-                  fontWeight: FontWeight.bold, 
-                  color: colorScheme.onBackground
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                event.description ?? 'No description',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onBackground.withOpacity(0.7),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Event Image Banner
+            if (event.imageUrl != null && event.imageUrl!.isNotEmpty)
               Container(
+                width: double.infinity,
+                height: 160,
                 decoration: BoxDecoration(
-                  color: colorScheme.surface, 
-                  borderRadius: BorderRadius.circular(12)
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  color: colorScheme.primary.withOpacity(0.1),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  child: Image.network(
+                    event.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: colorScheme.primary.withOpacity(0.5),
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: colorScheme.primary,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  color: colorScheme.primary.withOpacity(0.08),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.image,
+                    size: 36,
+                    color: colorScheme.primary.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatColumn('Registered', event.registeredAttendees?.toString() ?? '0'),
-                          _buildVerticalDivider(),
-                          _buildStatColumn('Checked In', event.checkedInAttendees?.toString() ?? '0'),
-                          _buildVerticalDivider(),
-                          _buildStatColumn('Capacity', event.capacity.toString()),
-                        ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusBgColor, 
+                          borderRadius: BorderRadius.circular(20)
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      if (event.status == EventStatus.approved && event.date.isAfter(DateTime.now())) ...[
-                        LinearProgressIndicator(
-                          value: (event.checkedInAttendees ?? 0) / event.capacity, 
-                          backgroundColor: colorScheme.outline.withOpacity(0.3), 
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary), 
-                          borderRadius: BorderRadius.circular(10)
+                      Text(
+                        '${event.date.month}/${event.date.day}/${event.date.year} • ${event.startTime.format(context)}', 
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onBackground.withOpacity(0.65), 
+                          fontSize: 12
                         ),
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            '${(((event.checkedInAttendees ?? 0) / event.capacity) * 100).toStringAsFixed(1)}% capacity',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onBackground.withOpacity(0.65), 
-                              fontSize: 10
-                            ),
-                          ),
-                        ),
-                      ] else if (event.status == EventStatus.pending) ...[
-                        LinearProgressIndicator(
-                          value: (event.registeredAttendees ?? 0) / event.capacity, 
-                          backgroundColor: colorScheme.outline.withOpacity(0.3), 
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary), 
-                          borderRadius: BorderRadius.circular(10)
-                        ),
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            '${(((event.registeredAttendees ?? 0) / event.capacity) * 100).toStringAsFixed(1)}% registered', 
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onBackground.withOpacity(0.65), 
-                              fontSize: 10
-                            ),
-                          ),
-                        ),
-                      ] else if (event.status == EventStatus.approved && event.date.isBefore(DateTime.now())) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStatColumn('Attended', event.checkedInAttendees?.toString() ?? '0'),
-                            _buildVerticalDivider(),
-                            _buildStatColumn('Revenue', '\$${(event.checkedInAttendees ?? 0) * (event.price ?? 25)}'),
-                            _buildVerticalDivider(),
-                            _buildStatColumn('Rating', '4.8/5'),
-                          ],
-                        ),
-                      ] else if (event.status == EventStatus.cancelled) ...[
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    event.title, 
+                    style: textTheme.titleLarge?.copyWith(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold, 
+                      color: colorScheme.onBackground
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    event.description ?? 'No description',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onBackground.withOpacity(0.7),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface, 
+                      borderRadius: BorderRadius.circular(12)
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              Icon(
-                                Icons.info_outline_rounded,
-                                color: Colors.grey,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'This event has been cancelled',
+                              _buildStatColumn('Registered', event.registeredAttendees?.toString() ?? '0'),
+                              _buildVerticalDivider(),
+                              _buildStatColumn('Checked In', event.checkedInAttendees?.toString() ?? '0'),
+                              _buildVerticalDivider(),
+                              _buildStatColumn('Capacity', event.capacity.toString()),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (event.status == EventStatus.approved && event.date.isAfter(DateTime.now())) ...[
+                            LinearProgressIndicator(
+                              value: (event.checkedInAttendees ?? 0) / event.capacity, 
+                              backgroundColor: colorScheme.outline.withOpacity(0.3), 
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary), 
+                              borderRadius: BorderRadius.circular(10)
+                            ),
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${(((event.checkedInAttendees ?? 0) / event.capacity) * 100).toStringAsFixed(1)}% capacity',
                                 style: textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onBackground.withOpacity(0.65), 
+                                  fontSize: 10
                                 ),
                               ),
-                            ],
+                            ),
+                          ] else if (event.status == EventStatus.pending) ...[
+                            LinearProgressIndicator(
+                              value: (event.registeredAttendees ?? 0) / event.capacity, 
+                              backgroundColor: colorScheme.outline.withOpacity(0.3), 
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary), 
+                              borderRadius: BorderRadius.circular(10)
+                            ),
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${(((event.registeredAttendees ?? 0) / event.capacity) * 100).toStringAsFixed(1)}% registered', 
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onBackground.withOpacity(0.65), 
+                                  fontSize: 10
+                                ),
+                              ),
+                            ),
+                          ] else if (event.status == EventStatus.approved && event.date.isBefore(DateTime.now())) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStatColumn('Attended', event.checkedInAttendees?.toString() ?? '0'),
+                                _buildVerticalDivider(),
+                                _buildStatColumn('Revenue', '\$${(event.checkedInAttendees ?? 0) * (event.price ?? 25)}'),
+                                _buildVerticalDivider(),
+                                _buildStatColumn('Rating', '4.8/5'),
+                              ],
+                            ),
+                          ] else if (event.status == EventStatus.cancelled) ...[
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    color: Colors.grey,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'This event has been cancelled',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Show different action buttons based on event status
+                  if (event.status == EventStatus.pending) ...[
+                    // PENDING EVENTS: Cancel button and status message in ONE ROW
+                    Row(
+                      children: [
+                        // Cancel Event Button
+                        Expanded(
+                          child: _buildCancelButton(
+                            'Cancel Event',
+                            Icons.cancel,
+                            onPressed: () => _cancelEvent(event),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Status message container
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: colorScheme.outline.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.schedule,
+                                    color: colorScheme.onBackground.withOpacity(0.6),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      'Awaiting',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onBackground.withOpacity(0.6),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Show different action buttons based on event status
-              if (event.status == EventStatus.pending) ...[
-                // PENDING EVENTS: Cancel button and status message in ONE ROW
-                Row(
-                  children: [
-                    // Cancel Event Button
-                    Expanded(
-                      child: _buildCancelButton(
-                        'Cancel Event',
-                        Icons.cancel,
-                        onPressed: () => _cancelEvent(event),
-                      ),
                     ),
-                    const SizedBox(width: 12),
-                    // Status message container
-                    Expanded(
+                  ] else if (event.status == EventStatus.approved && event.date.isAfter(DateTime.now())) ...[
+                    // ACTIVE EVENTS: Show event management buttons (No Cancel button)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton('Scan Ticket', Icons.qr_code_scanner, onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ManagerScanTicketPage()),
+                            );
+                          }),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton('View Details', Icons.info_outline, onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton('Attendance Report', Icons.analytics, onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                  ] else if (event.status == EventStatus.approved && event.date.isBefore(DateTime.now())) ...[
+                    // COMPLETED EVENTS: Show report button only
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                        );
+                      },
                       child: Container(
+                        width: double.infinity,
                         height: 48,
                         decoration: BoxDecoration(
                           color: colorScheme.surface,
@@ -1138,168 +1286,87 @@ Widget _buildStatCard(String title, String value, IconData icon) {
                           ),
                         ),
                         child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                color: colorScheme.onBackground.withOpacity(0.6),
-                                size: 18,
+                          child: Text(
+                            'View Detailed Report',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else if (event.status == EventStatus.cancelled) ...[
+                    // CANCELLED EVENTS: Show cancellation info
+                    Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.cancel,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Event Cancelled',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Awaiting',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onBackground.withOpacity(0.6),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else if (event.status == EventStatus.rejected) ...[
+                    // REJECTED EVENTS: Show rejection info
+                    Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.block,
+                              color: Colors.red,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Event Rejected by Admin',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ],
-                ),
-              ] else if (event.status == EventStatus.approved && event.date.isAfter(DateTime.now())) ...[
-                // ACTIVE EVENTS: Show event management buttons (No Cancel button)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton('Scan Ticket', Icons.qr_code_scanner, onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ManagerScanTicketPage()),
-                        );
-                      }),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton('View Details', Icons.info_outline, onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton('Attendance Report', Icons.analytics, onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ] else if (event.status == EventStatus.approved && event.date.isBefore(DateTime.now())) ...[
-                // COMPLETED EVENTS: Show report button only
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colorScheme.outline.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'View Detailed Report',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ] else if (event.status == EventStatus.cancelled) ...[
-                // CANCELLED EVENTS: Show cancellation info
-                Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.cancel,
-                          color: Colors.grey,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Event Cancelled',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ] else if (event.status == EventStatus.rejected) ...[
-                // REJECTED EVENTS: Show rejection info
-                Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.red.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.block,
-                          color: Colors.red,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Event Rejected by Admin',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
