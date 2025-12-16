@@ -83,6 +83,88 @@ class Event {
     );
   }
 
+  // ADDED: New factory constructor for querying approved events
+  factory Event.fromDocument(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
+    // Check what type of status is stored (int or string)
+    final statusValue = data['status'];
+    EventStatus status;
+    
+    if (statusValue is String) {
+      // If status is stored as string 'approved'
+      status = statusValue == 'approved' ? EventStatus.approved : EventStatus.pending;
+    } else if (statusValue is int) {
+      // If status is stored as int (1 = approved)
+      status = statusValue == 1 ? EventStatus.approved : EventStatus.pending;
+    } else {
+      status = EventStatus.pending;
+    }
+    
+    // Parse date - check if date field exists
+    DateTime eventDate;
+    if (data.containsKey('date') && data['date'] is Timestamp) {
+      eventDate = (data['date'] as Timestamp).toDate();
+    } else {
+      // If no date field, use current date with hour/minute
+      final now = DateTime.now();
+      final hour = data['hour'] as int? ?? 0;
+      final minute = data['minute'] as int? ?? 0;
+      eventDate = DateTime(now.year, now.month, now.day, hour, minute);
+    }
+    
+    // Parse startTime
+    TimeOfDay startTime;
+    if (data.containsKey('startTime') && data['startTime'] is Map) {
+      final startTimeData = data['startTime'] as Map<String, dynamic>;
+      startTime = TimeOfDay(
+        hour: startTimeData['hour'] as int? ?? 0,
+        minute: startTimeData['minute'] as int? ?? 0,
+      );
+    } else {
+      // Fallback to hour/minute fields
+      startTime = TimeOfDay(
+        hour: data['hour'] as int? ?? 0,
+        minute: data['minute'] as int? ?? 0,
+      );
+    }
+    
+    // Parse endTime
+    TimeOfDay? endTime;
+    if (data.containsKey('endTime') && data['endTime'] is Map) {
+      final endTimeData = data['endTime'] as Map<String, dynamic>;
+      endTime = TimeOfDay(
+        hour: endTimeData['hour'] as int? ?? 0,
+        minute: endTimeData['minute'] as int? ?? 0,
+      );
+    }
+    
+    // Get venue - try fullAddress first, then venue
+    final venue = data['fullAddress'] as String? ?? data['venue'] as String? ?? '';
+    
+    return Event(
+      id: doc.id,
+      title: data['title'] as String? ?? 'Untitled Event',
+      description: data['description'] as String? ?? '',
+      date: eventDate,
+      startTime: startTime,
+      endTime: endTime ?? TimeOfDay(hour: 23, minute: 59), // Default end time
+      venue: venue,
+      fullAddress: venue, // Use same as venue if fullAddress not available
+      category: data['category'] as String? ?? 'General',
+      capacity: data['capacity'] as int? ?? 0,
+      registeredAttendees: data['registeredAttendees'] as int? ?? 0,
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      managerEmail: data['managerEmail'] as String? ?? '',
+      imageUrl: data['imageUrl'] as String?,
+      status: status,
+      submittedAt: (data['submittedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      reviewedAt: data['reviewedAt'] != null ? (data['reviewedAt'] as Timestamp).toDate() : null,
+      reviewedBy: data['reviewedBy'] as String?,
+      checkedInAttendees: data['checkedInAttendees'] as int?,
+    );
+  }
+
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,

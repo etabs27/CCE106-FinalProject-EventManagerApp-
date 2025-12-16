@@ -181,11 +181,12 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
     });
   }
 
-  // Filter events based on search, categories, and status
+  // Filter events based on search, categories, and date
   List<Event> _filterEvents(List<Event> events) {
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);  // Get today's date at midnight
     List<Event> filteredEvents = events.where((event) {
-      // Only show approved and upcoming events
-      if (event.status != EventStatus.approved || event.date.isBefore(DateTime.now())) {
+      // Only show events on or after today
+      if (event.date.isBefore(today)) {
         return false;
       }
 
@@ -306,7 +307,11 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
         elevation: 0,
       ),
       body: StreamBuilder<List<Event>>(
-        stream: EventService.getAllEvents(),
+        stream: FirebaseFirestore.instance
+            .collection('events')
+            .where('status', isEqualTo: 1)  // Fetch only approved events (status 1)
+            .snapshots()
+            .map((snapshot) => snapshot.docs.map((doc) => Event.fromDocument(doc)).toList()),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -325,12 +330,12 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
           }
           
           final events = snapshot.data ?? [];
-          print('Fetched events count: ${events.length}');  // Add this
+          print('Fetched approved events count: ${events.length}');  // Updated message
           for (var event in events) {
-            print('Event: ${event.title}, Status: ${event.status}, Date: ${event.date}');  // Add this
+            print('Approved Event: ${event.title}, Date: ${event.date}');  // Removed status check
           }
           final filteredEvents = _filterEvents(events);
-          print('Filtered events count: ${filteredEvents.length}');  // Add this
+          print('Filtered upcoming events count: ${filteredEvents.length}');  // Updated message
           
           return SingleChildScrollView(
             child: Column(
@@ -685,7 +690,7 @@ class _UserHomePageWidgetState extends State<UserHomePageWidget> {
                             'Upcoming Events',
                             style: textTheme.titleLarge?.copyWith(
                               color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (filteredEvents.isNotEmpty)
