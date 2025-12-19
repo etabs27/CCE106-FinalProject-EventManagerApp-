@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -9,34 +11,91 @@ class AdminSettingsPage extends StatefulWidget {
 }
 
 class _AdminSettingsPageState extends State<AdminSettingsPage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late Stream<DocumentSnapshot> _adminDataStream;
+  
   // Settings states
   bool approvalNotifications = true;
   bool managerNotifications = true;
   bool eventNotifications = true;
   bool weeklyReport = false;
   
-  TextEditingController nameController = TextEditingController(text: 'Admin');
-  TextEditingController emailController = TextEditingController(text: 'admin@eventmanager.com');
+  TextEditingController nameController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
 
-  void _saveSettings() {
-    // Save settings to shared preferences or backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Settings saved',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimary,
-            fontWeight: FontWeight.w500,
+  @override
+  void initState() {
+    super.initState();
+    _setupAdminDataStream();
+  }
+
+  void _setupAdminDataStream() {
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      _adminDataStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .snapshots();
+    }
+  }
+
+  void _saveSettings() async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
+          'name': nameController.text.trim(),
+          'email': emailController.text.trim(),
+          'settings': {
+            'approvalNotifications': approvalNotifications,
+            'managerNotifications': managerNotifications,
+            'eventNotifications': eventNotifications,
+            'weeklyReport': weeklyReport,
+          },
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Settings saved successfully',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to save settings: ${e.toString()}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onError,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+        );
+      }
+    }
   }
 
   @override
@@ -67,55 +126,120 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Profile Section
-                _buildSectionTitle('Profile'),
-                _buildTextField('Name', nameController),
-                const SizedBox(height: 12),
-                _buildTextField('Email', emailController),
-                const SizedBox(height: 24),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: _adminDataStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                // Admin Notifications
-                _buildSectionTitle('Notifications'),
-                _buildSettingToggle(
-                  icon: Icons.approval_rounded,
-                  title: 'Event Approvals',
-                  subtitle: 'Get notified when managers create new events',
-                  value: approvalNotifications,
-                  onChanged: (value) => setState(() => approvalNotifications = value),
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading settings: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => setState(() {}),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_off, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Admin profile not found',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Update controllers with real data
+          final adminData = snapshot.data!.data() as Map<String, dynamic>;
+          final settings = adminData['settings'] as Map<String, dynamic>? ?? {};
+
+          // Update controllers only if they're empty (to avoid overriding user input)
+          if (nameController.text.isEmpty) {
+            nameController.text = adminData['name'] ?? '';
+          }
+          if (emailController.text.isEmpty) {
+            emailController.text = adminData['email'] ?? '';
+          }
+
+          // Update settings toggles
+          approvalNotifications = settings['approvalNotifications'] ?? true;
+          managerNotifications = settings['managerNotifications'] ?? true;
+          eventNotifications = settings['eventNotifications'] ?? true;
+          weeklyReport = settings['weeklyReport'] ?? false;
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile Section
+                    _buildSectionTitle('Profile'),
+                    _buildTextField('Name', nameController),
+                    const SizedBox(height: 12),
+                    _buildTextField('Email', emailController),
+                    const SizedBox(height: 24),
+
+                    // Admin Notifications
+                    _buildSectionTitle('Notifications'),
+                    _buildSettingToggle(
+                      icon: Icons.approval_rounded,
+                      title: 'Event Approvals',
+                      subtitle: 'Get notified when managers create new events',
+                      value: approvalNotifications,
+                      onChanged: (value) => setState(() => approvalNotifications = value),
+                    ),
+                    _buildSettingToggle(
+                      icon: Icons.person_add_rounded,
+                      title: 'New Managers',
+                      subtitle: 'Notifications for new manager registrations',
+                      value: managerNotifications,
+                      onChanged: (value) => setState(() => managerNotifications = value),
+                    ),
+                    _buildSettingToggle(
+                      icon: Icons.event_rounded,
+                      title: 'Event Updates',
+                      subtitle: 'Notifications for completed/active events',
+                      value: eventNotifications,
+                      onChanged: (value) => setState(() => eventNotifications = value),
+                    ),
+                    _buildSettingToggle(
+                      icon: Icons.analytics_rounded,
+                      title: 'Weekly Report',
+                      subtitle: 'Receive weekly admin report every Monday',
+                      value: weeklyReport,
+                      onChanged: (value) => setState(() => weeklyReport = value),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                _buildSettingToggle(
-                  icon: Icons.person_add_rounded,
-                  title: 'New Managers',
-                  subtitle: 'Notifications for new manager registrations',
-                  value: managerNotifications,
-                  onChanged: (value) => setState(() => managerNotifications = value),
-                ),
-                _buildSettingToggle(
-                  icon: Icons.event_rounded,
-                  title: 'Event Updates',
-                  subtitle: 'Notifications for completed/active events',
-                  value: eventNotifications,
-                  onChanged: (value) => setState(() => eventNotifications = value),
-                ),
-                _buildSettingToggle(
-                  icon: Icons.analytics_rounded,
-                  title: 'Weekly Report',
-                  subtitle: 'Receive weekly admin report every Monday',
-                  value: weeklyReport,
-                  onChanged: (value) => setState(() => weeklyReport = value),
-                ),
-                const SizedBox(height: 40),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

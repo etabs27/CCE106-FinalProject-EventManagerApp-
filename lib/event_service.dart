@@ -930,8 +930,32 @@ static Future<void> registerUserForEvent(String eventId) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception('User not authenticated');
   
+  // Generate unique ticket ID
+  final ticketId = '${eventId}_${user.uid}_${DateTime.now().millisecondsSinceEpoch}';
+  
+  print('Creating ticket: $ticketId');
+  print('  - Event ID: $eventId');
+  print('  - User ID: ${user.uid}');
+  print('  - User Email: ${user.email}');
+  
+  // Create ticket document
+  await FirebaseFirestore.instance.collection('tickets').doc(ticketId).set({
+    'ticketId': ticketId,
+    'eventId': eventId,
+    'userId': user.uid,
+    'userEmail': user.email,
+    'purchasedAt': FieldValue.serverTimestamp(),
+    'status': 'active', // active, used, cancelled
+    'qrData': ticketId, // Use ticketId as QR data
+  });
+  
+  print('Ticket created successfully in Firestore');
+  
+  // Update event registered attendees count
   await FirebaseFirestore.instance.collection('events').doc(eventId).update({
     'registeredAttendees': FieldValue.increment(1),
   });
+  
+  print('Event attendee count updated');
 }
 }

@@ -43,12 +43,16 @@ dependencies:
   google_sign_in: ^6.1.0
   google_fonts: ^6.3.2
   provider: ^6.0.5
+  firebase_storage: ^12.4.10
 
   # Image picking for gallery/camera
   image_picker: ^1.1.0
   
   # Cloudinary for image uploads
   cloudinary_public: ^0.21.0
+
+  # QR code generation
+  qr_flutter: ^4.1.0
 
   # Web implementations for packages
   shared_preferences: ^2.2.3

@@ -14,7 +14,6 @@ class AllEventsDesign extends StatefulWidget {
 
 class _AllEventsDesignState extends State<AllEventsDesign> {
   String _currentFilter = 'All';
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Timer? _searchDebounceTimer;
@@ -32,7 +31,6 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
   @override
   void dispose() {
     _isDisposed = true;
-    _scrollController.dispose();
     _searchController.dispose();
     _searchDebounceTimer?.cancel();
     super.dispose();
@@ -283,109 +281,105 @@ class _AllEventsDesignState extends State<AllEventsDesign> {
     );
   }
 
-  Widget _buildEventsList(BuildContext context, List<Event> events) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
-    // Apply search filter
-    List<Event> filteredEvents = _filterEvents(events, _searchQuery);
-    
-    // Filter events based on current filter
-    if (_currentFilter == 'Active') {
-      filteredEvents = filteredEvents.where((event) => 
-        event.status == EventStatus.approved && 
-        event.date.isAfter(DateTime.now())
-      ).toList();
-    } else if (_currentFilter == 'Pending') {
-      filteredEvents = filteredEvents.where((event) => event.status == EventStatus.pending).toList();
-    } else if (_currentFilter == 'Completed') {
-      filteredEvents = filteredEvents.where((event) => 
-        event.status == EventStatus.approved && 
-        event.date.isBefore(DateTime.now())
-      ).toList();
-    } else if (_currentFilter == 'Cancelled') {
-      filteredEvents = filteredEvents.where((event) => event.status == EventStatus.cancelled).toList();
-    }
-    
-    if (filteredEvents.isEmpty) {
-      String message;
-      if (_searchQuery.isNotEmpty) {
-        message = _currentFilter != 'All' 
-            ? 'No ${_currentFilter.toLowerCase()} events found for "$_searchQuery"'
-            : 'No events found for "$_searchQuery"';
-      } else {
-        message = 'No ${_currentFilter.toLowerCase()} events';
-      }
-      
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.filter_list_off,
-              size: 64,
-              color: theme.colorScheme.onBackground.withOpacity(0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                color: theme.colorScheme.onBackground.withOpacity(0.6),
-              ),
-            ),
-            if (_searchQuery.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: TextButton(
-                  onPressed: _clearSearch,
-                  child: Text('Clear search'),
-                ),
-              ),
-          ],
-        ),
-      );
-    }
-    
-    // Show search results count
-    Widget? header;
+Widget _buildEventsList(BuildContext context, List<Event> events) {
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+  
+  // Apply search filter
+  List<Event> filteredEvents = _filterEvents(events, _searchQuery);
+  
+  // Filter events based on current filter
+  if (_currentFilter == 'Active') {
+    filteredEvents = filteredEvents.where((event) => 
+      event.status == EventStatus.approved && 
+      event.date.isAfter(DateTime.now())
+    ).toList();
+  } else if (_currentFilter == 'Pending') {
+    filteredEvents = filteredEvents.where((event) => event.status == EventStatus.pending).toList();
+  } else if (_currentFilter == 'Completed') {
+    filteredEvents = filteredEvents.where((event) => 
+      event.status == EventStatus.approved && 
+      event.date.isBefore(DateTime.now())
+    ).toList();
+  } else if (_currentFilter == 'Cancelled') {
+    filteredEvents = filteredEvents.where((event) => event.status == EventStatus.cancelled).toList();
+  }
+  
+  if (filteredEvents.isEmpty) {
+    String message;
     if (_searchQuery.isNotEmpty) {
-      header = Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        child: Text(
-          'Found ${filteredEvents.length} ${filteredEvents.length == 1 ? 'event' : 'events'} for "$_searchQuery"',
-          style: TextStyle(
-            color: colorScheme.onBackground.withOpacity(0.6),
-            fontSize: 14,
-          ),
-        ),
-      );
+      message = _currentFilter != 'All' 
+          ? 'No ${_currentFilter.toLowerCase()} events found for "$_searchQuery"'
+          : 'No events found for "$_searchQuery"';
+    } else {
+      message = 'No ${_currentFilter.toLowerCase()} events';
     }
     
-    return Column(
-      children: [
-        if (header != null) header,
-        Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            itemCount: filteredEvents.length,
-            itemBuilder: (context, index) {
-              final event = filteredEvents[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: index < filteredEvents.length - 1 ? 16 : 0),
-                child: _EventCardStream(
-                  event: event,
-                ),
-              );
-            },
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.filter_list_off,
+            size: 64,
+            color: theme.colorScheme.onBackground.withOpacity(0.3),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              color: theme.colorScheme.onBackground.withOpacity(0.6),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: TextButton(
+                onPressed: _clearSearch,
+                child: Text('Clear search'),
+              ),
+            ),
+        ],
+      ),
     );
   }
-
+  
+  // Create header if search query is not empty
+  Widget? header;
+  if (_searchQuery.isNotEmpty) {
+    header = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Text(
+        'Found ${filteredEvents.length} ${filteredEvents.length == 1 ? 'event' : 'events'} for "$_searchQuery"',
+        style: TextStyle(
+          color: colorScheme.onBackground.withOpacity(0.6),
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+  
+  // Return a ListView that includes both header and event cards
+  return ListView(
+    children: [
+      if (header != null) header,
+      ...filteredEvents.map((event) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            bottom: event == filteredEvents.last ? 20 : 16,
+          ),
+          child: _EventCardStream(
+            event: event,
+          ),
+        );
+      }).toList(),
+    ],
+  );
+}
   // Helper method to filter events by search query
   List<Event> _filterEvents(List<Event> events, String query) {
     if (query.isEmpty) return events;

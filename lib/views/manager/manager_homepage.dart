@@ -637,7 +637,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     
     final activeEvents = deduplicatedEvents.where((e) => e.status == EventStatus.approved && e.date.isAfter(DateTime.now())).length;
     final pendingEvents = deduplicatedEvents.where((e) => e.status == EventStatus.pending).length;
-    final totalAttendees = deduplicatedEvents.fold<int>(0, (sum, event) => sum + (event.checkedInAttendees ?? 0));
+    final totalAttendees = deduplicatedEvents.fold<int>(0, (sum, event) => sum + (event.registeredAttendees ?? 0));
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -1247,7 +1247,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           child: _buildActionButton('View Details', Icons.info_outline, onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                              MaterialPageRoute(builder: (_) => ManagerAttendanceReportPage(eventId: event.id)),
                             );
                           }),
                         ),
@@ -1260,7 +1260,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           child: _buildActionButton('Attendance Report', Icons.analytics, onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                              MaterialPageRoute(builder: (_) => ManagerAttendanceReportPage(eventId: event.id)),
                             );
                           }),
                         ),
@@ -1272,7 +1272,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const ManagerAttendanceReportPage()),
+                          MaterialPageRoute(builder: (_) => ManagerAttendanceReportPage(eventId: event.id)),
                         );
                       },
                       child: Container(

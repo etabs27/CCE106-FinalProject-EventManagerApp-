@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:event_manager_application_finalproject/theme.dart';
+import 'package:event_manager_application_finalproject/event_service.dart';
+import 'package:event_manager_application_finalproject/models/event.dart';
+import 'package:event_manager_application_finalproject/views/admin/admin_eventapproval.dart';
 
 class AdminNotificationPage extends StatefulWidget {
   const AdminNotificationPage({super.key});
@@ -104,160 +107,213 @@ class _AdminNotificationPageState extends State<AdminNotificationPage> {
     return _notifications; // All notifications
   }
 
+  // Method to mark a specific notification as read
+  void _markAsRead(String id) {
+    setState(() {
+      for (var notification in _notifications) {
+        if (notification['id'] == id && !notification['isRead']) {
+          notification['isRead'] = true;
+          _calculateUnreadCount();
+          break;
+        }
+      }
+    });
+  }
+
+  // Method to mark a pending event notification as read
+  void _markEventNotificationAsRead(String eventId) {
+    setState(() {
+      for (var notification in _notifications) {
+        if (notification['type'] == 'event' && 
+            notification['id'] == eventId && 
+            !notification['isRead']) {
+          notification['isRead'] = true;
+          _calculateUnreadCount();
+          break;
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: colorScheme.onBackground,
-            size: 24,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          'Notifications',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.onBackground,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
-              onTap: _markAllAsRead,
-              child: Stack(
-                children: [
-                  // Icon container
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colorScheme.primary.withOpacity(0.1),
-                    ),
-                    child: Icon(
-                      Icons.done_all_rounded,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  // Notification badge
-                  if (_unreadCount > 0)
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        width: 18,
-                        height: 18,
+    return StreamBuilder<List<Event>>(
+      stream: EventService.getPendingEvents(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        final pendingEvents = snapshot.data ?? [];
+        final eventNotifications = pendingEvents.map((event) => Map<String, dynamic>.from({
+          'id': event.id,
+          'title': 'New Event Created',
+          'description': '${event.title} needs approval. Review event details.',
+          'time': 'Recently',
+          'type': 'event',
+          'isRead': false,
+          'icon': Icons.event_rounded,
+          'event': event, // Store the event object for navigation
+        })).toList();
+        final allNotifications = [...eventNotifications, ..._notifications];
+        final unreadCount = allNotifications.where((n) => !(n['isRead'] as bool)).length;
+        final filteredNotifications = _currentFilter == 'Unread' ? allNotifications.where((n) => !(n['isRead'] as bool)).toList() : _currentFilter == 'Read' ? allNotifications.where((n) => n['isRead'] as bool).toList() : allNotifications;
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final textTheme = theme.textTheme;
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: colorScheme.surface,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: colorScheme.onBackground,
+                size: 24,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            title: Text(
+              'Notifications',
+              style: textTheme.titleLarge?.copyWith(
+                color: colorScheme.onBackground,
+                fontWeight: FontWeight.w700,
+                fontSize: 24,
+              ),
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GestureDetector(
+                  onTap: _markAllAsRead,
+                  child: Stack(
+                    children: [
+                      // Icon container
+                      Container(
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: colorScheme.error,
-                          border: Border.all(
-                            color: colorScheme.surface,
-                            width: 2,
-                          ),
+                          color: colorScheme.primary.withOpacity(0.1),
                         ),
-                        child: Center(
-                          child: Text(
-                            _unreadCount > 9 ? '9+' : '$_unreadCount',
-                            style: TextStyle(
-                              color: colorScheme.onError,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
+                        child: Icon(
+                          Icons.done_all_rounded,
+                          color: colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      // Notification badge
+                      if (unreadCount > 0)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colorScheme.error,
+                              border: Border.all(
+                                color: colorScheme.surface,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: TextStyle(
+                                  color: colorScheme.onError,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-        centerTitle: false,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Filter dropdown row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.filter_list_rounded,
-                        color: colorScheme.primary,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 80),
-                        child: _buildFilterDropdown(),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.arrow_drop_down_rounded,
-                        color: colorScheme.primary,
-                        size: 16,
-                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
+            centerTitle: false,
+            elevation: 0,
           ),
+          body: Column(
+            children: [
+              // Filter dropdown row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: colorScheme.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.filter_list_rounded,
+                            color: colorScheme.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            constraints: const BoxConstraints(maxWidth: 80),
+                            child: _buildFilterDropdown(allNotifications),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: colorScheme.primary,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Notifications List
-          Expanded(
-            child: _filteredNotifications.isEmpty
-                ? _buildEmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _filteredNotifications.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final notification = _filteredNotifications[index];
-                      return _buildNotificationItem(notification);
-                    },
-                  ),
+              // Notifications List
+              Expanded(
+                child: filteredNotifications.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: filteredNotifications.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final notification = filteredNotifications[index];
+                          return _buildNotificationItem(notification);
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildFilterDropdown() {
+  Widget _buildFilterDropdown(List<Map<String, dynamic>> notifications) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     // Calculate counts
-    final int totalCount = _notifications.length;
-    final int unreadCount = _unreadCount;
+    final int totalCount = notifications.length;
+    final int unreadCount = notifications.where((n) => !(n['isRead'] as bool)).length;
+    final int readCount = notifications.where((n) => n['isRead'] as bool).length;
 
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
@@ -297,6 +353,17 @@ class _AdminNotificationPageState extends State<AdminNotificationPage> {
               ),
             ),
           ),
+          DropdownMenuItem<String>(
+            value: 'Read',
+            child: Text(
+              'Read ($readCount)',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
         onChanged: (String? newValue) {
           if (newValue != null) {
@@ -329,101 +396,135 @@ class _AdminNotificationPageState extends State<AdminNotificationPage> {
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.primary.withOpacity(0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    VoidCallback? onTap;
+    if (notification['type'] == 'event') {
+      onTap = () {
+        // Mark the notification as read first
+        if (!isRead) {
+          if (notification['event'] != null) {
+            // This is a pending event notification
+            _markEventNotificationAsRead(notification['id'] as String);
+          } else {
+            // This is a regular notification
+            _markAsRead(notification['id'] as String);
+          }
+        }
+        // Navigate to event approvals page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const EventApprovalsDesign(),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Notification Icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: getNotificationColor().withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                notification['icon'] as IconData,
-                color: getNotificationColor(),
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
+        );
+      };
+    } else {
+      onTap = () {
+        // Mark the notification as read when tapped
+        if (!isRead) {
+          _markAsRead(notification['id'] as String);
+        }
+        // You can add other navigation logic here for different notification types
+      };
+    }
 
-            // Notification Content - Wrap in Expanded with width constraint
-            Expanded(
-              child: SizedBox(
-                width: double.infinity, // Constrains the width
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification['title'] as String,
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onBackground,
-                              fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                              fontSize: 15,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (!isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification['description'] as String,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onBackground.withOpacity(0.7),
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      notification['time'] as String,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onBackground.withOpacity(0.5),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: colorScheme.primary.withOpacity(0.1),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Notification Icon
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: getNotificationColor().withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  notification['icon'] as IconData,
+                  color: getNotificationColor(),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // Notification Content - Wrap in Expanded with width constraint
+              Expanded(
+                child: SizedBox(
+                  width: double.infinity, // Constrains the width
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification['title'] as String,
+                              style: textTheme.bodyLarge?.copyWith(
+                                color: colorScheme.onBackground,
+                                fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!isRead)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notification['description'] as String,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onBackground.withOpacity(0.7),
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        notification['time'] as String,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onBackground.withOpacity(0.5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -455,7 +556,7 @@ class _AdminNotificationPageState extends State<AdminNotificationPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              _currentFilter == 'Unread' ? 'No Unread Notifications' : 'No Notifications',
+              _currentFilter == 'Unread' ? 'No Unread Notifications' : _currentFilter == 'Read' ? 'No Read Notifications' : 'No Notifications',
               style: textTheme.titleLarge?.copyWith(
                 color: colorScheme.onBackground,
                 fontWeight: FontWeight.w700,
@@ -466,7 +567,9 @@ class _AdminNotificationPageState extends State<AdminNotificationPage> {
             Text(
               _currentFilter == 'Unread'
                   ? 'You\'ve read all your notifications!'
-                  : 'You\'re all caught up! Check back later\nfor new updates.',
+                  : _currentFilter == 'Read'
+                      ? 'No notifications have been read yet.'
+                      : 'You\'re all caught up! Check back later\nfor new updates.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onBackground.withOpacity(0.6),
                 fontSize: 15,

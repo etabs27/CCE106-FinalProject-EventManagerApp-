@@ -10,6 +10,8 @@ import 'package:event_manager_application_finalproject/auth/login.dart';
 import 'package:event_manager_application_finalproject/views/user/user_homepagenotification.dart';
 import 'package:event_manager_application_finalproject/views/user/user_profilepageeditprofile.dart'; 
 import 'package:event_manager_application_finalproject/views/user/user_profilepagepayment.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,6 +22,71 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   int _currentIndex = 4; // Profile is the 5th item (index 4)
+  String _userName = 'Loading...';
+  String _userEmail = 'Loading...';
+  int _totalFavorites = 0;
+  int _totalTickets = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final email = user.email ?? 'No email';
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      String name = 'User';
+      if (userDoc.exists) {
+        name = userDoc.data()?['name'] as String? ?? email.split('@')[0];
+      } else {
+        name = email.split('@')[0];
+      }
+
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      final ticketsSnapshot = await FirebaseFirestore.instance
+          .collection('tickets')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _userName = name;
+          _userEmail = email;
+          _totalFavorites = favoritesSnapshot.docs?.length ?? 0;
+          _totalTickets = ticketsSnapshot.docs?.length ?? 0;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      if (mounted) {
+        setState(() {
+          _userName = 'Error';
+          _userEmail = 'Could not load email';
+          _totalFavorites = 0;
+          _totalTickets = 0;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     
                     // Name and Email
                     Text(
-                      'Alex Johnson', 
+                      _userName, 
                       style: textTheme.titleLarge?.copyWith(
                         color: colorScheme.onBackground,
                         fontWeight: FontWeight.w600,
@@ -93,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'alexjohnson@gmail.com', 
+                      _userEmail, 
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onBackground.withOpacity(0.65), 
                         fontSize: 14
@@ -105,8 +172,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem('45', 'Likes'),
-                        _buildStatItem('8', 'Tickets'),
+                        _buildStatItem(_totalFavorites.toString(), 'Favorites'),
+                        _buildStatItem(_totalTickets.toString(), 'Tickets'),
                       ],
                     ),
                   ],
@@ -283,7 +350,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             _buildNavItem(Icons.home_rounded, 'Home', 0),
             _buildNavItem(Icons.explore_rounded, 'Explore', 1),
-            _buildNavItem(Icons.favorite_border_rounded, 'Like', 2),
+            _buildNavItem(Icons.favorite_border_rounded, 'Favorites', 2),
             _buildNavItem(Icons.confirmation_number_rounded, 'Tickets', 3),
             _buildNavItem(Icons.person_outline_rounded, 'Profile', 4),
           ],
